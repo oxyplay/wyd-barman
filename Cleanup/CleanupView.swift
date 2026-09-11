@@ -76,8 +76,8 @@ struct CleanupView: View {
                 }
             }
             Divider()
-            Text("Estimated reclaim: \(formatBytes(plan.estimatedReclaimBytes))")
-                .foregroundStyle(.secondary)
+            Text(reclaimText(plan))
+            .foregroundStyle(.secondary)
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
@@ -91,14 +91,19 @@ struct CleanupView: View {
                         Button("Clean", role: .destructive) { clean() }
                         Button("Cancel", role: .cancel) {}
                     } message: {
-                        Text(
-                            "Estimated reclaim: \(formatBytes(plan.estimatedReclaimBytes))"
-                        )
+                        Text(reclaimText(plan))
                     }
             }
         }
         .padding(20)
     }
+
+    private func reclaimText(_ plan: CleanupPlan) -> String {
+        plan.estimatedReclaimBytes > 0
+            ? "Estimated reclaim: \(formatBytes(plan.estimatedReclaimBytes))"
+            : "Estimated reclaim: unknown (engine reported no sizes)"
+    }
+
 
     private func cleanTapped() {
         if confirmCleanup {

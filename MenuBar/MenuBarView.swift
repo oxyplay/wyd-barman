@@ -109,8 +109,13 @@ struct MenuBarView: View {
                 }
                 if snapshot.leftovers.count > 0 {
                     Section("LEFTOVERS") {
+                        // A 0-byte estimate means "size unknown" (e.g. Docker
+                        // did not report the container size) — show it plain.
+                        let reclaim = snapshot.leftovers.estimatedReclaimBytes
                         Button(
-                            "Review \(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))"
+                            reclaim > 0
+                                ? "Review \(snapshot.leftovers.count) · \(formatBytes(reclaim))"
+                                : "Review \(snapshot.leftovers.count)"
                         ) {
                             Task { await state.fetchCleanupPlan() }
                             openWindow(id: "cleanup")
