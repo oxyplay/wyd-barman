@@ -115,8 +115,10 @@ struct CleanupView: View {
 
     private func clean() {
         Task {
-            await state.executeCleanup()
-            dismiss()
+            // Keep the sheet open on failure so the banner is actually seen.
+            if await state.executeCleanup() {
+                dismiss()
+            }
         }
     }
 }

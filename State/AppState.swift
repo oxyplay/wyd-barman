@@ -109,29 +109,27 @@ final class AppState {
         }
     }
 
-    func executeCleanup() async {
-        guard let plan = cleanupPlan else { return }
+    /// Returns true on success; on failure the caller should keep the sheet
+    /// open — the error is surfaced in the banner.
+    func executeCleanup() async -> Bool {
+        guard let plan = cleanupPlan else { return false }
         let all = Set(plan.items.map(\.resourceID))
         let only = cleanupSelection == all ? nil : Array(cleanupSelection)
-        var failed = false
         do {
             _ = try await client.executeCleanup(planID: plan.planID, only: only)
         } catch {
-            // Surface the failure in the banner; the sheet stays open so the
-            // user actually sees it.
             if let e = error as? WydError {
                 present(e)
             } else {
                 errorBanner = "Cleanup failed."
                 errorDetail = error.localizedDescription
             }
-            failed = true
+            return false
         }
-        if !failed {
-            cleanupPlan = nil
-            cleanupSelection = []
-            await refresh()
-        }
+        cleanupPlan = nil
+        cleanupSelection = []
+        await refresh()
+        return true
     }
 
     func checkVersion() async {
