@@ -102,8 +102,10 @@ struct MenuBarView: View {
                 }
                 if !snapshot.projects.isEmpty {
                     Section("PROJECTS") {
+                        // Monospaced column: pad names so RAM right-aligns.
+                        let nameWidth = snapshot.projects.map(\.name.count).max() ?? 0
                         ForEach(snapshot.projects) { project in
-                            ProjectRow(state: state, project: project)
+                            ProjectRow(state: state, project: project, nameWidth: nameWidth)
                         }
                     }
                 }
@@ -146,9 +148,15 @@ struct MenuBarView: View {
                 }
                 let active = snapshot.sessions.filter { $0.status != "ended" }
                 if !active.isEmpty {
+                    let shown = active.prefix(10)
+                    // Pad "agent · project" so ages right-align (monospaced).
+                    let prefixWidth = shown
+                        .map { "\($0.agent) · \(state.name(forProjectID: $0.projectID) ?? "—")".count }
+                        .max() ?? 0
                     Section("AGENTS") {
-                        ForEach(active.prefix(10)) { session in
-                            SessionRow(state: state, session: session)
+                        ForEach(shown) { session in
+                            SessionRow(
+                                state: state, session: session, prefixWidth: prefixWidth)
                         }
                         let ended = snapshot.sessions.filter { $0.status == "ended" }.count
                         if ended > 0 {
@@ -275,6 +283,9 @@ struct ResourceRow: View {
 struct ProjectRow: View {
     @Bindable var state: AppState
     let project: Project
+    /// Longest project name in the section; names are padded to it so the
+    /// RAM column right-aligns (monospaced font makes the padding honest).
+    let nameWidth: Int
 
     var body: some View {
         Menu {
@@ -292,9 +303,10 @@ struct ProjectRow: View {
             // Concatenated Text stays a single text run (menu-safe) while
             // embedding the RAM glyph inline.
             Label {
-                Text(project.name + "  ")
+                (Text(project.name.padding(toLength: nameWidth, withPad: " ", startingAt: 0) + "  ")
                     + Text(Image(systemName: "memorychip"))
-                    + Text(" " + formatBytes(project.memoryBytes))
+                    + Text(" " + formatBytes(project.memoryBytes)))
+                    .monospaced()
             } icon: {
                 Image(systemName: "folder")
             }
@@ -303,6 +315,32 @@ struct ProjectRow: View {
     }
 }
 
+struct SessionRow: View {
+    @Bindable var state: AppState
+    let session: Session
+    let prefixWidth: Int
+
+    var body: some View {
+        // Enabled no-op Button: a disabled row renders dimmed by AppKit, which
+        // made working agents look switched-off. Empty action = no-op.
+        Button {
+            // display-only row; details live in wyd
+        } label: {
+            Label {
+                let prefix =
+                    "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—")"
+                (Text(prefix.padding(toLength: prefixWidth, withPad: " ", startingAt: 0))
+                    + Text(" \(formatAge(session.ageSeconds))"))
+                    .monospaced()
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "sparkle")
+                    .foregroundStyle(.yellow)
+            }
+        }
+        .imageScale(.small)
+    }
+}
 
 struct ContainerRow: View {
     @Bindable var state: AppState
@@ -326,31 +364,6 @@ struct ContainerRow: View {
                 systemImage: container.status == "running" ? "shippingbox.fill" : "shippingbox"
             )
         }
-        .imageScale(.small)
-    }
-}
-
-struct SessionRow: View {
-    @Bindable var state: AppState
-    let session: Session
-
-    var body: some View {
-        // Enabled no-op Button: a disabled row renders dimmed by AppKit, which
-        // made working agents look switched-off. Empty action = no-op.
-        Button {
-            // display-only row; details live in wyd
-        } label: {
-            Label {
-                Text(
-                    "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
-                )
-                .foregroundStyle(.primary)
-            } icon: {
-                Image(systemName: "sparkle")
-                    .foregroundStyle(.yellow)
-            }
-        }
-        .imageScale(.small)
     }
 }
 
