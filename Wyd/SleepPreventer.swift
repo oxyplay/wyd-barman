@@ -5,7 +5,8 @@ import IOKit.pwr_mgt
 /// via the native `IOPMAssertion` API (no external process). Toggle on/off.
 final class SleepPreventer: @unchecked Sendable {
     static let shared = SleepPreventer()
-    private var assertionID: IOPMAssertionID = 0
+    /// One assertion per type: system sleep AND display sleep / screen saver.
+    private var assertionIDs: [IOPMAssertionID] = []
     private var active = false
 
     private init() {}
@@ -30,25 +31,28 @@ final class SleepPreventer: @unchecked Sendable {
     private func start() {
         guard !active else { return }
         let reason = "wyd-barman: keep awake" as CFString
-        var assertion = IOPMAssertionID(0)
-        let ok = IOPMAssertionCreateWithName(
-            kIOPMAssertionTypeNoIdleSleep as CFString,
-            IOPMAssertionLevel(kIOPMAssertionLevelOn),
-            reason,
-            &assertion
-        )
-        guard ok == kIOReturnSuccess else { return }
-        assertionID = assertion
-        active = true
+        for kind in [kIOPMAssertionTypeNoIdleSleep, kIOPMAssertionTypeNoDisplaySleep] {
+            var assertion = IOPMAssertionID(0)
+            let ok = IOPMAssertionCreateWithName(
+                kind as CFString,
+                IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                reason,
+                &assertion
+            )
+            if ok == kIOReturnSuccess {
+                assertionIDs.append(assertion)
+            }
+        }
+        active = !assertionIDs.isEmpty
     }
 
     @MainActor
     private func stop() {
         guard active else { return }
-        if assertionID != 0 {
-            IOPMAssertionRelease(assertionID)
-            assertionID = 0
+        for id in assertionIDs {
+            IOPMAssertionRelease(id)
         }
+        assertionIDs = []
         active = false
     }
 }
