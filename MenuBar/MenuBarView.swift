@@ -32,7 +32,6 @@ struct MenuBarView: View {
                 menuItems
             }
             Divider()
-            Toggle("Demo mode", isOn: $state.demoMode)
             Toggle("Keep awake", isOn: $state.preventSleep)
             Button("Settings…") { openSettings() }
             Button("Quit wyd-barman") { NSApplication.shared.terminate(nil) }

@@ -2,9 +2,9 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-/// Minimal settings: launch at login, keep-awake, engine binary, and
-/// confirmation behavior. No discovery/ownership/cleanup rules — those
-/// belong in `wyd`. (Refresh is fixed: on open + every 10s while open.)
+/// Minimal settings: launch at login, keep-awake, demo mode, engine binary,
+/// and confirmation behavior. No discovery/ownership/cleanup rules — those
+/// belong in `wyd`. Toggles are right-aligned macOS-style via LabeledContent.
 struct SettingsView: View {
     @Bindable var state: AppState
     @AppStorage(SettingsKeys.confirmProjectStop) private var confirmProjectStop = true
@@ -14,54 +14,98 @@ struct SettingsView: View {
     @State private var loginEnabled = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        // Plain layout sized to content: the grouped Form overflowed the
-        // settings window and showed a scrollbar.
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             settingTitle("General")
-            Toggle("Launch at Login", isOn: $loginEnabled)
-                .onChange(of: loginEnabled) { _, on in
-                    setLogin(enabled: on)
+            VStack(spacing: 10) {
+                settingsRow {
+                    Toggle("Launch at Login", isOn: $loginEnabled)
+                        .onChange(of: loginEnabled) { _, on in
+                            setLogin(enabled: on)
+                        }
                 }
-            if let loginError {
-                Text(loginError)
-                    .foregroundStyle(.red)
-                    .font(.caption)
+                settingsRow {
+                    Toggle("Keep Mac awake", isOn: $state.preventSleep)
+                }
+                settingsRow {
+                    Toggle("Demo mode", isOn: $state.demoMode)
+                }
+                explanationRow(
+                    "Keep awake: no sleep and no screen saver. Demo mode: synthetic data from the engine, safe to click around."
+                )
+                if let loginError {
+                    Text(loginError)
+                        .foregroundStyle(.red)
+                        .font(.caption)
+                }
             }
-            Toggle("Keep Mac awake (no sleep / no screen saver)", isOn: $state.preventSleep)
-            Toggle(
-                "Demo mode (synthetic data, safe to click around)",
-                isOn: $state.demoMode)
 
             Divider()
+
             settingTitle("wyd")
-            HStack {
-                TextField("/opt/homebrew/bin/wyd", text: $binaryPath)
-                    .textFieldStyle(.roundedBorder)
-                Button("Choose…") { chooseBinary() }
-                if !binaryPath.isEmpty {
-                    Button("Clear") { binaryPath = "" }
+            VStack(spacing: 10) {
+                HStack {
+                    Text("Binary")
+                    Spacer()
+                    Text(binaryDisplayPath)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(binaryDisplayPath)
+                    Button("Choose…") { chooseBinary() }
+                        .controlSize(.small)
+                    if !binaryPath.isEmpty {
+                        Button("Reset") { binaryPath = "" }
+                            .controlSize(.small)
+                    }
                 }
-            }
-            HStack {
-                Text("Version")
-                Spacer()
-                Text(state.wydVersion ?? "unknown").foregroundStyle(.secondary)
+                HStack {
+                    Text("Version")
+                    Spacer()
+                    Text(state.wydVersion ?? "unknown")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Divider()
+
             settingTitle("Behavior")
-            Toggle("Confirm project stop", isOn: $confirmProjectStop)
-            Toggle("Confirm cleanup", isOn: $confirmCleanup)
+            VStack(spacing: 10) {
+                settingsRow {
+                    Toggle("Confirm project stop", isOn: $confirmProjectStop)
+                }
+                settingsRow {
+                    Toggle("Confirm cleanup", isOn: $confirmCleanup)
+                }
+            }
         }
         .toggleStyle(.switch)
-        .padding(20)
-        .frame(width: 420, alignment: .leading)
+        .padding(24)
+        .frame(width: 440, alignment: .leading)
         .task {
             await state.checkVersion()
         }
         .onChange(of: binaryPath) {
             Task { await state.checkVersion() }
         }
+    }
+
+    /// Row with the label left and the toggle right (standard macOS settings).
+    private func settingsRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack {
+            content()
+            Spacer(minLength: 12)
+        }
+    }
+
+    private func explanationRow(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var binaryDisplayPath: String {
+        binaryPath.isEmpty ? "auto-detected" : binaryPath
     }
 
     private func settingTitle(_ text: String) -> some View {
@@ -88,6 +132,7 @@ struct SettingsView: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
+        panel.directoryURL = URL(fileURLWithPath: "/opt/homebrew/bin")
         if panel.runModal() == .OK, let url = panel.url {
             binaryPath = url.path
         }
