@@ -14,36 +14,32 @@ func formatAge(_ seconds: UInt64) -> String {
     return "\(seconds / 86_400)d"
 }
 
-/// Native AppKit menu (`.menuBarExtraStyle(.menu)`): the system renders and
-/// opens it instantly, no window juggling. Sections render via `Section`
-/// headers; every resource row is a submenu of action items built verbatim
-/// from the engine's `actions` array. Force Kill is a two-step submenu —
-/// native menus close before any dialog, so no `confirmationDialog` here.
+/// Native AppKit menu (`.menuBarExtraStyle(.menu)`). Native menu items
+/// flatten SwiftUI labels to a single line of text — every row label here is
+/// ONE composed `Text` ("● name :port"), never an HStack. Actions live in
+/// submenus, built verbatim from the engine's `actions` array. Force Kill is
+/// a two-step submenu (menus close before any dialog can appear).
 struct MenuBarView: View {
     @Bindable var state: AppState
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         Group {
             if state.snapshot == nil {
-                Group {
-                    if state.errorBanner == "wyd not found" {
-                        missingWyd
-                    } else if state.errorBanner == "wyd needs to be updated" {
-                        incompatibleWyd
-                    } else {
-                        ProgressView("Loading…")
-                    }
-                }
+                engineStateRows
             } else {
                 menuItems
             }
             Divider()
-            footer
+            Toggle("Keep awake", isOn: $state.preventSleep)
+            Button("Settings…") { openSettings() }
+            Button("Quit wyd-barman") { NSApplication.shared.terminate(nil) }
+                .keyboardShortcut("q")
         }
         .task {
             // Open-menu refresh: render cache instantly, then refresh every
-            // 10s until the menu closes (native menu content only lives
-            // while open). No background refresh when closed.
+            // 10s while open. No refresh when closed.
             await state.refresh()
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(10))
@@ -52,12 +48,12 @@ struct MenuBarView: View {
         }
     }
 
+    // MARK: - Content
+
     private var menuItems: some View {
         Group {
             if let snapshot = state.snapshot {
-                // One-line status, no section header.
                 Text(snapshot.system.oneLine)
-                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
             if let banner = state.errorBanner {
@@ -107,9 +103,11 @@ struct MenuBarView: View {
                 }
                 if snapshot.leftovers.count > 0 {
                     Section("LEFTOVERS") {
-                        Button("Review \(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))") {
+                        Button(
+                            "Review \(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))"
+                        ) {
                             Task { await state.fetchCleanupPlan() }
-                            openCleanup()
+                            openWindow(id: "cleanup")
                         }
                     }
                 }
@@ -117,24 +115,16 @@ struct MenuBarView: View {
         }
     }
 
-    @Environment(\.openWindow) private var openWindow
-    private func openCleanup() {
-        openWindow(id: "cleanup")
-    }
-
     // MARK: - Engine states
 
-    private var missingWyd: some View {
-        Group {
+    @ViewBuilder
+    private var engineStateRows: some View {
+        if state.errorBanner == "wyd not found" {
             Text("wyd not found")
             Text("wyd-barman requires the wyd engine.").foregroundStyle(.secondary)
             Link("Install wyd", destination: WydLocator.installURL)
             Button("Locate…") { locateBinary() }
-        }
-    }
-
-    private var incompatibleWyd: some View {
-        Group {
+        } else if state.errorBanner == "wyd needs to be updated" {
             Text("wyd needs to be updated")
             if let detail = state.errorDetail {
                 Text(detail).foregroundStyle(.secondary)
@@ -154,22 +144,18 @@ struct MenuBarView: View {
             Task { await state.refresh() }
         }
     }
+}
 
-    // MARK: - Footer
-
-    private var footer: some View {
-        Group {
-            Toggle("Keep awake", isOn: $state.preventSleep)
-            SettingsLink()
-            Button("Quit wyd-barman") { NSApplication.shared.terminate(nil) }
-                .keyboardShortcut("q")
-        }
+func resourceLabel(_ resource: Resource) -> String {
+    var label = "● \(resource.name)"
+    if let port = resource.port {
+        label += "  :\(port)"
     }
+    return label
 }
 
 // MARK: - Rows
 
-/// `● Name :port` item with a submenu of actions from the engine.
 struct ResourceRow: View {
     @Bindable var state: AppState
     let resource: Resource
@@ -182,7 +168,7 @@ struct ResourceRow: View {
                 } else if let action = ResourceAction(rawValue: token), action != .open,
                     action != .kill
                 {
-                    Button(ActionIcon.name(token)) {
+                    Button(actionName(token)) {
                         Task {
                             await state.perform(
                                 target: resource.id, action: action, displayName: resource.name)
@@ -206,20 +192,8 @@ struct ResourceRow: View {
                 Text("PID \(pid) · \(formatBytes(resource.memoryBytes))").foregroundStyle(.secondary)
             }
         } label: {
-            rowLabel
+            Text(resourceLabel(resource))
         }
-    }
-
-    private var rowLabel: some View {
-        HStack(spacing: 6) {
-            Text("●").font(.caption2)
-            Text(resource.name).lineLimit(1).truncationMode(.middle)
-            Spacer()
-            if let port = resource.port {
-                Text(":\(port)").foregroundStyle(.secondary).font(.callout)
-            }
-        }
-        .frame(width: 260, alignment: .leading)
     }
 }
 
@@ -235,17 +209,12 @@ struct ProjectRow: View {
             Divider()
             Button("Stop \(project.name)", role: .destructive) {
                 Task {
-                    await state.perform(target: project.id, action: .stop, displayName: project.name)
+                    await state.perform(
+                        target: project.id, action: .stop, displayName: project.name)
                 }
             }
         } label: {
-            HStack(spacing: 6) {
-                Text("●").font(.caption2)
-                Text(project.name).lineLimit(1).truncationMode(.middle)
-                Spacer()
-                Text(formatBytes(project.memoryBytes)).foregroundStyle(.secondary).font(.caption)
-            }
-            .frame(width: 260, alignment: .leading)
+            Text("● \(project.name)  \(formatBytes(project.memoryBytes))")
         }
     }
 }
@@ -258,7 +227,7 @@ struct ContainerRow: View {
         Menu {
             ForEach(container.actions, id: \.self) { token in
                 if let action = ResourceAction(rawValue: token) {
-                    Button(ActionIcon.name(token)) {
+                    Button(actionName(token)) {
                         Task {
                             await state.perform(
                                 target: container.id, action: action, displayName: container.name)
@@ -267,13 +236,7 @@ struct ContainerRow: View {
                 }
             }
         } label: {
-            HStack(spacing: 6) {
-                Text("●").font(.caption2)
-                Text(container.name).lineLimit(1).truncationMode(.middle)
-                Spacer()
-                Text(container.status).foregroundStyle(.secondary).font(.callout)
-            }
-            .frame(width: 260, alignment: .leading)
+            Text("● \(container.name)  (\(container.status))")
         }
     }
 }
@@ -283,31 +246,21 @@ struct SessionRow: View {
     let session: Session
 
     var body: some View {
-        Button {
-            // Display-only row; deep session details live in wyd.
-        } label: {
-            HStack(spacing: 6) {
-                Text(session.agent).lineLimit(1).truncationMode(.middle)
-                Spacer()
-                Text("\(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
-            .frame(width: 260, alignment: .leading)
+        Button {} label: {
+            Text(
+                "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
+            )
         }
         .disabled(true)
     }
 }
 
-/// Menu label words for engine action tokens.
-enum ActionIcon {
-    static func name(_ token: String) -> String {
-        switch token {
-        case "open": "Open"
-        case "start": "Start"
-        case "stop": "Stop"
-        case "restart": "Restart"
-        default: "Action"
-        }
+func actionName(_ token: String) -> String {
+    switch token {
+    case "open": "Open"
+    case "start": "Start"
+    case "stop": "Stop"
+    case "restart": "Restart"
+    default: "Action"
     }
 }
