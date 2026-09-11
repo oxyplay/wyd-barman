@@ -32,10 +32,14 @@ struct MenuBarView: View {
                 menuItems
             }
             Divider()
+            Toggle("Demo mode", isOn: $state.demoMode)
             Toggle("Keep awake", isOn: $state.preventSleep)
             Button("Settings…") { openSettings() }
             Button("Quit wyd-barman") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
+        }
+        .onChange(of: state.demoMode) {
+            Task { await state.refresh() }
         }
         // Native menus default to title-only; without this the SF Symbol
         // icons on rows are dropped by the NSMenuItem mapping.

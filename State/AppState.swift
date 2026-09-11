@@ -4,6 +4,7 @@ enum SettingsKeys {
     static let confirmProjectStop = "confirmProjectStop"
     static let confirmCleanup = "confirmCleanup"
     static let preventSleep = "preventSleep"
+    static let demoMode = "demoMode"
 }
 
 /// Cached `wyd` snapshot plus refresh policy. No background refreshes when
@@ -24,6 +25,13 @@ final class AppState {
         didSet {
             UserDefaults.standard.set(preventSleep, forKey: SettingsKeys.preventSleep)
             SleepPreventer.shared.setActive(preventSleep)
+        }
+    }
+
+    /// Routes every engine call through the deterministic demo dataset.
+    var demoMode = UserDefaults.standard.bool(forKey: SettingsKeys.demoMode) {
+        didSet {
+            UserDefaults.standard.set(demoMode, forKey: SettingsKeys.demoMode)
         }
     }
 

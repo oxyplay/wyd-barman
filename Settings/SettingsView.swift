@@ -28,6 +28,9 @@ struct SettingsView: View {
                     .font(.caption)
             }
             Toggle("Keep Mac awake (no sleep / no screen saver)", isOn: $state.preventSleep)
+            Toggle(
+                "Demo mode (synthetic data, safe to click around)",
+                isOn: $state.demoMode)
 
             Divider()
             settingTitle("wyd")

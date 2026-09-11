@@ -22,7 +22,8 @@ struct ProcessWydClient: WydClient {
 
     func snapshot() async throws -> Snapshot {
         let data = try await invoke(
-            ["barman", "snapshot", "--json"], timeout: snapshotTimeout, what: "Snapshot")
+            Self.args(["barman", "snapshot"], json: true),
+            timeout: snapshotTimeout, what: "Snapshot")
         let probe: VersionProbe = try decode(data)
         guard probe.schemaVersion == wydRequiredSchemaVersion else {
             throw WydError.incompatible(wydVersion: probe.wydVersion)
@@ -32,7 +33,9 @@ struct ProcessWydClient: WydClient {
 
     func perform(target: String, action: ResourceAction) async throws -> ActionResult {
         let data = try await invoke(
-            ["barman", "action", "--target", target, "--action", action.engineName, "--json"],
+            Self.args(
+                ["barman", "action", "--target", target, "--action", action.engineName],
+                json: true),
             timeout: actionTimeout,
             what: "Action",
             // Exit code 2 carries a structured stale-target body; decode it
@@ -53,7 +56,8 @@ struct ProcessWydClient: WydClient {
 
     func cleanupPlan() async throws -> CleanupPlan {
         let data = try await invoke(
-            ["barman", "cleanup-plan", "--json"], timeout: snapshotTimeout, what: "Cleanup plan")
+            Self.args(["barman", "cleanup-plan"], json: true),
+            timeout: snapshotTimeout, what: "Cleanup plan")
         let probe: VersionProbe = try decode(data)
         guard probe.schemaVersion == wydRequiredSchemaVersion else {
             throw WydError.incompatible(wydVersion: probe.wydVersion)
@@ -62,12 +66,12 @@ struct ProcessWydClient: WydClient {
     }
 
     func executeCleanup(planID: String, only: [String]?) async throws -> CleanupResult {
-        var args = ["barman", "execute", "--plan", planID]
+        var base = ["barman", "execute", "--plan", planID]
         if let only, !only.isEmpty {
-            args += ["--only", only.joined(separator: ",")]
+            base += ["--only", only.joined(separator: ",")]
         }
-        args.append("--json")
-        let data = try await invoke(args, timeout: actionTimeout, what: "Cleanup")
+        let data = try await invoke(
+            Self.args(base, json: true), timeout: actionTimeout, what: "Cleanup")
         let result: CleanupResult = try decode(data)
         guard result.ok else {
             throw WydError.actionFailed(
@@ -76,6 +80,20 @@ struct ProcessWydClient: WydClient {
         }
         return result
     }
+
+    /// Demo mode (UserDefaults): routes every call through the engine's
+    /// deterministic synthetic dataset — nothing on the host is touched.
+    static func args(_ base: [String], json: Bool) -> [String] {
+        var args = base
+        if UserDefaults.standard.bool(forKey: "demoMode") {
+            args.append("--demo")
+        }
+        if json {
+            args.append("--json")
+        }
+        return args
+    }
+
 
     func apiVersion() async throws -> ApiVersion {
         let data = try await invoke(
