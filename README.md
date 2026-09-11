@@ -1,3 +1,5 @@
+![wyd-barman](logo.svg)
+
 # wyd-barman
 
 Tiny native macOS menu-bar remote control for [wyd](https://wyd.sh) (the engine).
@@ -31,16 +33,32 @@ Incompatible schema → "wyd needs to be updated", never a decode crash.
 
 ## Use
 
-Click the menu-bar glass → Projects / Services / Docker / Agents /
-Leftovers sections render from cache instantly, then refresh. Every row's
-menu is built verbatim from the engine's `actions` array (Open / Stop /
-Restart / Force Kill). Leftovers → Review opens the Cleanup sheet backed
-by `wyd barman cleanup-plan` / `execute` (deselect supported, still
-engine-validated). Footer: Refresh / Settings / Quit.
+Click the menu-bar glass → cached snapshot renders instantly, then
+refreshes (on open + every 10s while open; a light background poll every
+3 min while closed).
 
-Settings: Launch at Login (`SMAppService`), refresh cadence
-(Auto 20s / Frequent 5s / Paused), binary path + detected version,
-confirm toggles for project stop and cleanup.
+Sections:
+
+- **STATUS** — one line: `CPU · RAM · Disk free` (measured by the engine).
+- **FRONTENDS** — everything running with a URL; one click opens the
+  browser (URL supplied by the engine only).
+- **PROJECTS** — per project: resources, total RAM, Stop (with confirm).
+- **SERVICES / DOCKER** — databases and containers; Docker rolls up into a
+  submenu (running first, then stopped) with a disk-usage line.
+- **AGENTS** — active coding-agent sessions; ended ones are summarized.
+- **LEFTOVERS → Review** — cleanup plan backed by
+  `wyd barman cleanup-plan` / `execute` (deselect supported, still
+  engine-validated).
+
+Every row's submenu is built verbatim from the engine's `actions` array
+(Open / Start / Stop / Restart); Force Kill is a two-step submenu.
+Footer: Keep awake (no sleep / no screen saver via `IOPMAssertion`),
+Settings, Quit.
+
+Settings: Launch at Login (`SMAppService`), Keep awake, Demo mode (the
+engine's deterministic synthetic dataset — safe to click around for
+screenshots), binary path + detected version, confirm toggles for project
+stop and cleanup.
 
 ## Architecture
 
