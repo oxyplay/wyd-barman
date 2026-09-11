@@ -61,16 +61,32 @@ struct MenuBarView: View {
             if let snapshot = state.snapshot {
                 Text(snapshot.system.oneLine)
                     .foregroundStyle(.secondary)
-            }
-            if let banner = state.errorBanner {
-                Section {
-                    Text(banner).foregroundStyle(.red)
-                    if let detail = state.errorDetail {
-                        Text(detail).foregroundStyle(.secondary)
+                if let banner = state.errorBanner {
+                    Section {
+                        Text(banner).foregroundStyle(.red)
+                        if let detail = state.errorDetail {
+                            Text(detail).foregroundStyle(.secondary)
+                        }
                     }
                 }
-            }
-            if let snapshot = state.snapshot {
+                // Quick launch: everything running with a URL, one click to
+                // open in the browser (URL supplied by the engine only).
+                let frontends = snapshot.resources.filter {
+                    $0.url != nil && $0.actions.contains("open")
+                }
+                if !frontends.isEmpty {
+                    Section("FRONTENDS") {
+                        ForEach(frontends) { resource in
+                            Button {
+                                if let urlString = resource.url, let url = URL(string: urlString) {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: {
+                                Label(resourceLabel(resource), systemImage: "globe")
+                            }
+                        }
+                    }
+                }
                 if !snapshot.projects.isEmpty {
                     Section("PROJECTS") {
                         ForEach(snapshot.projects) { project in
