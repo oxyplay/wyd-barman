@@ -83,6 +83,29 @@ struct Resource: Codable, Identifiable {
         case estimatedReclaimBytes = "estimated_reclaim_bytes"
         case actions
     }
+
+    /// The engine omits empty arrays (`skip_serializing_if`); decode them as
+    /// `[]` instead of failing on a missing key.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        kind = try c.decode(String.self, forKey: .kind)
+        name = try c.decode(String.self, forKey: .name)
+        status = try c.decode(String.self, forKey: .status)
+        projectID = try c.decodeIfPresent(String.self, forKey: .projectID)
+        sessionID = try c.decodeIfPresent(String.self, forKey: .sessionID)
+        port = try c.decodeIfPresent(Int.self, forKey: .port)
+        ports = try c.decodeIfPresent([Int].self, forKey: .ports) ?? []
+        pid = try c.decodeIfPresent(Int.self, forKey: .pid)
+        memoryBytes = try c.decode(UInt64.self, forKey: .memoryBytes)
+        cpuPercent = try c.decode(Float.self, forKey: .cpuPercent)
+        url = try c.decodeIfPresent(String.self, forKey: .url)
+        classification = try c.decode(String.self, forKey: .classification)
+        confidence = try c.decodeIfPresent(String.self, forKey: .confidence)
+        reasons = try c.decodeIfPresent([String].self, forKey: .reasons) ?? []
+        estimatedReclaimBytes = try c.decode(UInt64.self, forKey: .estimatedReclaimBytes)
+        actions = try c.decode([String].self, forKey: .actions)
+    }
 }
 
 struct Container: Codable, Identifiable {
