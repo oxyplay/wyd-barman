@@ -146,8 +146,22 @@ struct MenuBarView: View {
     }
 }
 
+/// Small SF Symbol per resource kind — replaces the plain dots.
+func kindSymbol(_ kind: String) -> String {
+    switch kind {
+    case "dev_server": "globe"
+    case "database": "cylinder"
+    case "agent": "sparkle"
+    case "mcp": "puzzlepiece"
+    case "browser": "safari"
+    case "worker": "gearshape"
+    case "service", "dev_service": "wrench.and.screwdriver"
+    default: "circle"
+    }
+}
+
 func resourceLabel(_ resource: Resource) -> String {
-    var label = "● \(resource.name)"
+    var label = resource.name
     if let port = resource.port {
         label += "  :\(port)"
     }
@@ -192,8 +206,9 @@ struct ResourceRow: View {
                 Text("PID \(pid) · \(formatBytes(resource.memoryBytes))").foregroundStyle(.secondary)
             }
         } label: {
-            Text(resourceLabel(resource))
+            Label(resourceLabel(resource), systemImage: kindSymbol(resource.kind))
         }
+        .imageScale(.small)
     }
 }
 
@@ -214,10 +229,16 @@ struct ProjectRow: View {
                 }
             }
         } label: {
-            Text("● \(project.name)  \(formatBytes(project.memoryBytes))")
+            Label {
+                Text("\(project.name)  \(formatBytes(project.memoryBytes))")
+            } icon: {
+                Image(systemName: "folder")
+            }
         }
+        .imageScale(.small)
     }
 }
+
 
 struct ContainerRow: View {
     @Bindable var state: AppState
@@ -236,8 +257,12 @@ struct ContainerRow: View {
                 }
             }
         } label: {
-            Text("● \(container.name)  (\(container.status))")
+            Label(
+                "\(container.name)  (\(container.status))",
+                systemImage: container.status == "running" ? "shippingbox.fill" : "shippingbox"
+            )
         }
+        .imageScale(.small)
     }
 }
 
@@ -247,10 +272,15 @@ struct SessionRow: View {
 
     var body: some View {
         Button {} label: {
-            Text(
-                "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
-            )
+            Label {
+                Text(
+                    "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
+                )
+            } icon: {
+                Image(systemName: "sparkle")
+            }
         }
+        .imageScale(.small)
         .disabled(true)
     }
 }
