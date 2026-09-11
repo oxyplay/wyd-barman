@@ -14,43 +14,56 @@ struct SettingsView: View {
     @State private var loginEnabled = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        Form {
-            Section("General") {
-                Toggle("Launch at Login", isOn: $loginEnabled)
-                    .onChange(of: loginEnabled) { _, on in
-                        setLogin(enabled: on)
-                    }
-                if let loginError {
-                    Text(loginError)
-                        .foregroundStyle(.red)
+        // Plain layout sized to content: the grouped Form overflowed the
+        // settings window and showed a scrollbar.
+        VStack(alignment: .leading, spacing: 14) {
+            settingTitle("General")
+            Toggle("Launch at Login", isOn: $loginEnabled)
+                .onChange(of: loginEnabled) { _, on in
+                    setLogin(enabled: on)
                 }
-                Toggle("Keep Mac awake (no sleep / no screen saver)", isOn: $state.preventSleep)
+            if let loginError {
+                Text(loginError)
+                    .foregroundStyle(.red)
+                    .font(.caption)
             }
-            Section("wyd") {
-                HStack {
-                    TextField("/opt/homebrew/bin/wyd", text: $binaryPath)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Choose…") { chooseBinary() }
-                    if !binaryPath.isEmpty {
-                        Button("Clear") { binaryPath = "" }
-                    }
+            Toggle("Keep Mac awake (no sleep / no screen saver)", isOn: $state.preventSleep)
+
+            Divider()
+            settingTitle("wyd")
+            HStack {
+                TextField("/opt/homebrew/bin/wyd", text: $binaryPath)
+                    .textFieldStyle(.roundedBorder)
+                Button("Choose…") { chooseBinary() }
+                if !binaryPath.isEmpty {
+                    Button("Clear") { binaryPath = "" }
                 }
-                LabeledContent("Version", value: state.wydVersion ?? "unknown")
             }
-            Section("Behavior") {
-                Toggle("Confirm project stop", isOn: $confirmProjectStop)
-                Toggle("Confirm cleanup", isOn: $confirmCleanup)
+            HStack {
+                Text("Version")
+                Spacer()
+                Text(state.wydVersion ?? "unknown").foregroundStyle(.secondary)
             }
+
+            Divider()
+            settingTitle("Behavior")
+            Toggle("Confirm project stop", isOn: $confirmProjectStop)
+            Toggle("Confirm cleanup", isOn: $confirmCleanup)
         }
-        .formStyle(.grouped)
-        .frame(width: 440)
-        .padding(8)
+        .toggleStyle(.switch)
+        .padding(20)
+        .frame(width: 420, alignment: .leading)
         .task {
             await state.checkVersion()
         }
         .onChange(of: binaryPath) {
             Task { await state.checkVersion() }
         }
+    }
+
+    private func settingTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.headline)
     }
 
     private func setLogin(enabled: Bool) {
