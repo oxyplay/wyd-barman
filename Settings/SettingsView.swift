@@ -17,18 +17,12 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             settingTitle("General")
             VStack(spacing: 10) {
-                settingsRow {
-                    Toggle("Launch at Login", isOn: $loginEnabled)
-                        .onChange(of: loginEnabled) { _, on in
-                            setLogin(enabled: on)
-                        }
-                }
-                settingsRow {
-                    Toggle("Keep Mac awake", isOn: $state.preventSleep)
-                }
-                settingsRow {
-                    Toggle("Demo mode", isOn: $state.demoMode)
-                }
+                toggleRow("Launch at Login", isOn: $loginEnabled)
+                    .onChange(of: loginEnabled) { _, on in
+                        setLogin(enabled: on)
+                    }
+                toggleRow("Keep Mac awake", isOn: $state.preventSleep)
+                toggleRow("Demo mode", isOn: $state.demoMode)
                 explanationRow(
                     "Keep awake: no sleep and no screen saver. Demo mode: synthetic data from the engine, safe to click around."
                 )
@@ -70,12 +64,8 @@ struct SettingsView: View {
 
             settingTitle("Behavior")
             VStack(spacing: 10) {
-                settingsRow {
-                    Toggle("Confirm project stop", isOn: $confirmProjectStop)
-                }
-                settingsRow {
-                    Toggle("Confirm cleanup", isOn: $confirmCleanup)
-                }
+                toggleRow("Confirm project stop", isOn: $confirmProjectStop)
+                toggleRow("Confirm cleanup", isOn: $confirmCleanup)
             }
         }
         .toggleStyle(.switch)
@@ -89,11 +79,14 @@ struct SettingsView: View {
         }
     }
 
-    /// Row with the label left and the toggle right (standard macOS settings).
-    private func settingsRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    /// Label left, switch pinned to the trailing edge (like System Settings).
+    private func toggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
         HStack {
-            content()
-            Spacer(minLength: 12)
+            Text(title)
+            Spacer(minLength: 16)
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .fixedSize()
         }
     }
 
