@@ -37,6 +37,9 @@ struct MenuBarView: View {
             Button("Quit wyd-barman") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
+        // Native menus default to title-only; without this the SF Symbol
+        // icons on rows are dropped by the NSMenuItem mapping.
+        .labelStyle(.titleAndIcon)
         .task {
             // Open-menu refresh: render cache instantly, then refresh every
             // 10s while open. No refresh when closed.
