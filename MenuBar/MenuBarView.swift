@@ -260,8 +260,12 @@ struct ProjectRow: View {
                 }
             }
         } label: {
+            // Concatenated Text stays a single text run (menu-safe) while
+            // embedding the RAM glyph inline.
             Label {
-                Text("\(project.name)  \(formatBytes(project.memoryBytes))")
+                Text(project.name + "  ")
+                    + Text(Image(systemName: "memorychip"))
+                    + Text(" " + formatBytes(project.memoryBytes))
             } icon: {
                 Image(systemName: "folder")
             }
@@ -302,16 +306,20 @@ struct SessionRow: View {
     let session: Session
 
     var body: some View {
-        // Plain non-item row: a disabled Button renders dimmed, which made
-        // working agents look switched-off. Text renders at full strength.
-        Label {
-            Text(
-                "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
-            )
-            .foregroundStyle(.primary)
-        } icon: {
-            Image(systemName: "sparkle")
-                .foregroundStyle(.yellow)
+        // Enabled no-op Button: a disabled row renders dimmed by AppKit, which
+        // made working agents look switched-off. Empty action = no-op.
+        Button {
+            // display-only row; details live in wyd
+        } label: {
+            Label {
+                Text(
+                    "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
+                )
+                .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "sparkle")
+                    .foregroundStyle(.yellow)
+            }
         }
         .imageScale(.small)
     }
