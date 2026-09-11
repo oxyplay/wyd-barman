@@ -89,10 +89,30 @@ struct MenuBarView: View {
                     }
                 }
                 if !snapshot.containers.isEmpty {
+                    let running = snapshot.containers.filter { $0.status == "running" }
+                    let stopped = snapshot.containers.filter { $0.status != "running" }
+                    let runningDisk = running.reduce(UInt64(0)) { $0 + $1.sizeBytes }
                     Section("DOCKER") {
-                        ForEach(snapshot.containers) { container in
-                            ContainerRow(state: state, container: container)
+                        Menu {
+                            ForEach(running) { ContainerRow(state: state, container: $0) }
+                            if !stopped.isEmpty {
+                                Divider()
+                                Text("Stopped").foregroundStyle(.secondary)
+                                ForEach(stopped) { ContainerRow(state: state, container: $0) }
+                            }
+                        } label: {
+                            Label(
+                                stopped.isEmpty
+                                    ? "Docker — \(running.count) running"
+                                    : "Docker — \(running.count) running · \(stopped.count) stopped",
+                                systemImage: "shippingbox.fill")
                         }
+                        // Static stats line: counts + disk footprint of the
+                        // running set (RAM per container is engine-side work).
+                        Text(
+                            "\(running.count) running · \(formatBytes(runningDisk)) disk"
+                        )
+                        .foregroundStyle(.secondary)
                     }
                 }
                 let active = snapshot.sessions.filter { $0.status != "ended" }
@@ -282,17 +302,18 @@ struct SessionRow: View {
     let session: Session
 
     var body: some View {
-        Button {} label: {
-            Label {
-                Text(
-                    "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
-                )
-            } icon: {
-                Image(systemName: "sparkle")
-            }
+        // Plain non-item row: a disabled Button renders dimmed, which made
+        // working agents look switched-off. Text renders at full strength.
+        Label {
+            Text(
+                "\(session.agent) · \(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
+            )
+            .foregroundStyle(.primary)
+        } icon: {
+            Image(systemName: "sparkle")
+                .foregroundStyle(.yellow)
         }
         .imageScale(.small)
-        .disabled(true)
     }
 }
 

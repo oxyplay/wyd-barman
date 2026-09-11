@@ -144,13 +144,15 @@ struct Container: Codable, Identifiable {
     let composeProject: String?
     let ports: [Int]
     let status: String
+    let sizeBytes: UInt64
     let actions: [String]
     let estimatedReclaimBytes: UInt64
 
     enum CodingKeys: String, CodingKey {
-        case id, name
+        case id, name, status, actions
         case composeProject = "compose_project"
-        case ports, status, actions
+        case ports
+        case sizeBytes = "size_bytes"
         case estimatedReclaimBytes = "estimated_reclaim_bytes"
     }
 }
