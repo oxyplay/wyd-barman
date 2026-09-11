@@ -275,6 +275,12 @@ struct ResourceRow: View {
 struct ProjectRow: View {
     @Bindable var state: AppState
     let project: Project
+    @State private var confirmingStop = false
+
+    private var confirmStop: Bool {
+        UserDefaults.standard
+            .object(forKey: SettingsKeys.confirmProjectStop) as? Bool ?? true
+    }
 
     var body: some View {
         Menu {
@@ -282,12 +288,7 @@ struct ProjectRow: View {
                 ResourceRow(state: state, resource: resource)
             }
             Divider()
-            Button("Stop \(project.name)", role: .destructive) {
-                Task {
-                    await state.perform(
-                        target: project.id, action: .stop, displayName: project.name)
-                }
-            }
+            Button("Stop \(project.name)…") { stopTapped() }
         } label: {
             // Concatenated Text stays a single text run (menu-safe) while
             // embedding the RAM glyph inline.
@@ -300,9 +301,33 @@ struct ProjectRow: View {
             }
         }
         .imageScale(.small)
+        .confirmationDialog(
+            "Stop \(project.name)?",
+            isPresented: $confirmingStop,
+            titleVisibility: .visible
+        ) {
+            Button("Stop", role: .destructive) { stop() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("\(project.resourceCount) resources · \(formatBytes(project.memoryBytes))")
+        }
+    }
+
+    private func stopTapped() {
+        if confirmStop {
+            confirmingStop = true
+        } else {
+            stop()
+        }
+    }
+
+    private func stop() {
+        Task {
+            await state.perform(
+                target: project.id, action: .stop, displayName: project.name)
+        }
     }
 }
-
 
 struct ContainerRow: View {
     @Bindable var state: AppState

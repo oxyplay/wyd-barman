@@ -7,9 +7,9 @@ enum SettingsKeys {
     static let demoMode = "demoMode"
 }
 
-/// Cached `wyd` snapshot plus refresh policy. No background refreshes when
-/// the menu is closed: refresh happens on menu open and every 10s while open
-/// (the menu's `.task`), never overlapping via `inFlight`.
+/// Cached `wyd` snapshot plus refresh policy. Refresh happens on menu open
+/// and every 10s while open; a light background poll (3 min) keeps the
+/// cache fresh while closed. `inFlight` never lets them overlap.
 @Observable
 @MainActor
 final class AppState {
@@ -94,7 +94,11 @@ final class AppState {
         do {
             let plan = try await client.cleanupPlan()
             cleanupPlan = plan
-            cleanupSelection = Set(plan.items.map(\.resourceID))
+            // Engine decides: only selected + safe rows are pre-checked.
+            cleanupSelection = Set(
+                plan.items
+                    .filter { $0.selected && $0.safe }
+                    .map(\.resourceID))
             errorBanner = nil
             errorDetail = nil
         } catch let error as WydError {
@@ -109,16 +113,24 @@ final class AppState {
         guard let plan = cleanupPlan else { return }
         let all = Set(plan.items.map(\.resourceID))
         let only = cleanupSelection == all ? nil : Array(cleanupSelection)
+        var failed = false
         do {
             _ = try await client.executeCleanup(planID: plan.planID, only: only)
+        } catch {
+            // Surface the failure in the banner; the sheet stays open so the
+            // user actually sees it.
+            if let e = error as? WydError {
+                present(e)
+            } else {
+                errorBanner = "Cleanup failed."
+                errorDetail = error.localizedDescription
+            }
+            failed = true
+        }
+        if !failed {
             cleanupPlan = nil
             cleanupSelection = []
             await refresh()
-        } catch let error as WydError {
-            present(error)
-        } catch {
-            errorBanner = "Cleanup failed."
-            errorDetail = error.localizedDescription
         }
     }
 

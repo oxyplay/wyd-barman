@@ -60,6 +60,12 @@ struct WydLocator: Sendable {
         while process.isRunning && Date() < deadline {
             Thread.sleep(forTimeInterval: 0.05)
         }
+        if process.isRunning {
+            process.terminate()
+        }
+        // Wait for real exit so the pipe is closed — then the blocking read
+        // cannot hang (readDataToEndOfFile waits for EOF).
+        process.waitUntilExit()
         guard
             let raw = String(
                 data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)

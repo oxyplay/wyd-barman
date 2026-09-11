@@ -135,6 +135,20 @@ struct ProcessWydClient: WydClient {
                     summary: "\(what) could not start.", detail: error.localizedDescription)
             }
             let deadline = Date().addingTimeInterval(timeout)
+            // Drain stdout/stderr in background threads WHILE the child
+            // runs: a large JSON snapshot could otherwise fill the pipe
+            // buffer, deadlock the child on write(), and look like a
+            // timeout. Reading concurrently is the canonical fix.
+            let stdoutQueue = DispatchQueue(label: "stdout-drain")
+            let stderrQueue = DispatchQueue(label: "stderr-drain")
+            var stdoutData = Data()
+            var stderrData = Data()
+            stdoutQueue.async {
+                stdoutData = stdout.fileHandleForReading.readDataToEndOfFile()
+            }
+            stderrQueue.async {
+                stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
+            }
             while process.isRunning && Date() < deadline {
                 try await Task.sleep(for: .milliseconds(50))
             }
@@ -142,10 +156,12 @@ struct ProcessWydClient: WydClient {
                 process.terminate()
                 throw WydError.timeout(what: what)
             }
+            // Child has exited; pipes are closing. Wait for the drains.
+            _ = stdoutQueue.sync {}
+            _ = stderrQueue.sync {}
             return ProcessOutput(
-                stdout: stdout.fileHandleForReading.readDataToEndOfFile(),
-                stderr: String(
-                    data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8),
+                stdout: stdoutData,
+                stderr: String(data: stderrData, encoding: .utf8),
                 exitCode: process.terminationStatus
             )
         }.value
