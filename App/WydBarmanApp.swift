@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -8,21 +9,7 @@ struct WydBarmanApp: App {
         MenuBarExtra {
             MenuBarView(state: state)
         } label: {
-            // Explicit 14pt frame: the asset's transparent padding is ignored
-            // by the menu bar, so glyph size is controlled here, not by SVG
-            // viewBox.
-            Group {
-                if (state.snapshot?.leftovers.count ?? 0) > 0 {
-                    Image("MenuBarIconAlert")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                } else {
-                    Image("MenuBarIcon")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                }
-            }
-            .frame(width: 14, height: 14)
+            menuIcon()
         }
         .menuBarExtraStyle(.menu)
 
@@ -34,5 +21,18 @@ struct WydBarmanApp: App {
             CleanupView(state: state)
         }
         .windowResizability(.contentSize)
+    }
+
+    /// Template icon at a fixed 13pt: `MenuBarExtra`'s SwiftUI `Image` label
+    /// ignores parent `.frame` sizing (it sizes to the asset), so size the
+    /// underlying `NSImage` directly. Template mode keeps dark/light correct.
+    private func menuIcon() -> Image {
+        let alert = (state.snapshot?.leftovers.count ?? 0) > 0
+        guard let nsImage = NSImage(named: alert ? "MenuBarIconAlert" : "MenuBarIcon") else {
+            return Image(systemName: "wineglass")
+        }
+        nsImage.isTemplate = true
+        nsImage.size = NSSize(width: 13, height: 13)
+        return Image(nsImage: nsImage)
     }
 }
