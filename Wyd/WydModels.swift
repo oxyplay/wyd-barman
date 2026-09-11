@@ -41,7 +41,7 @@ struct SystemMetrics: Codable {
     }
 
     var oneLine: String {
-        "CPU \(Int(cpuPercent.rounded()))% · RAM \(memoryUsedPercent)% · Disk \(formattedFree) free"
+        "CPU \(Int(cpuPercent.rounded()))% · RAM \(memoryUsedPercent)% · Disk \(formattedFree)"
     }
 
     private var formattedFree: String {

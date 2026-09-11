@@ -55,10 +55,10 @@ struct MenuBarView: View {
     private var menuItems: some View {
         Group {
             if let snapshot = state.snapshot {
-                Section("STATUS") {
-                    Text(snapshot.system.oneLine)
-                        .font(.callout)
-                }
+                // One-line status, no section header.
+                Text(snapshot.system.oneLine)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
             if let banner = state.errorBanner {
                 Section {
@@ -105,21 +105,14 @@ struct MenuBarView: View {
                         }
                     }
                 }
-                Section("LEFTOVERS") {
-                    leftovers(snapshot: snapshot)
+                if snapshot.leftovers.count > 0 {
+                    Section("LEFTOVERS") {
+                        Button("Review \(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))") {
+                            Task { await state.fetchCleanupPlan() }
+                            openCleanup()
+                        }
+                    }
                 }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func leftovers(snapshot: Snapshot) -> some View {
-        if snapshot.leftovers.count == 0 {
-            Text("Nothing left behind").foregroundStyle(.secondary)
-        } else {
-            Button("Review \(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))") {
-                Task { await state.fetchCleanupPlan() }
-                openCleanup()
             }
         }
     }
@@ -167,8 +160,6 @@ struct MenuBarView: View {
     private var footer: some View {
         Group {
             Toggle("Keep awake", isOn: $state.preventSleep)
-            Button("Refresh") { Task { await state.refresh() } }
-                .keyboardShortcut("r")
             SettingsLink()
             Button("Quit wyd-barman") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
@@ -228,7 +219,7 @@ struct ResourceRow: View {
                 Text(":\(port)").foregroundStyle(.secondary).font(.callout)
             }
         }
-        .frame(width: 240, alignment: .leading)
+        .frame(width: 260, alignment: .leading)
     }
 }
 
@@ -254,7 +245,7 @@ struct ProjectRow: View {
                 Spacer()
                 Text(formatBytes(project.memoryBytes)).foregroundStyle(.secondary).font(.caption)
             }
-            .frame(width: 240, alignment: .leading)
+            .frame(width: 260, alignment: .leading)
         }
     }
 }
@@ -282,7 +273,7 @@ struct ContainerRow: View {
                 Spacer()
                 Text(container.status).foregroundStyle(.secondary).font(.callout)
             }
-            .frame(width: 240, alignment: .leading)
+            .frame(width: 260, alignment: .leading)
         }
     }
 }
@@ -302,7 +293,7 @@ struct SessionRow: View {
                     .foregroundStyle(.secondary)
                     .font(.caption)
             }
-            .frame(width: 240, alignment: .leading)
+            .frame(width: 260, alignment: .leading)
         }
         .disabled(true)
     }
