@@ -2,8 +2,6 @@ import AppKit
 import SwiftUI
 
 func formatBytes(_ bytes: UInt64) -> String {
-    // Fresh instance per call: ByteCountFormatter is not Sendable, and menu
-    // rows are few enough that sharing buys nothing.
     let formatter = ByteCountFormatter()
     formatter.countStyle = .memory
     return formatter.string(fromByteCount: Int64(bytes))
@@ -16,26 +14,25 @@ func formatAge(_ seconds: UInt64) -> String {
     return "\(seconds / 86_400)d"
 }
 
+/// Compact window-style panel (`.menuBarExtraStyle(.window)`). Rows are
+/// single-line; primary actions (open / stop / start / restart) reveal on
+/// hover for one-click access; Force Kill sits in a per-row menu.
 struct MenuBarView: View {
     @Bindable var state: AppState
     @Environment(\.openWindow) private var openWindow
     @State private var locateError: String?
+    @State private var hoveredID: String?
+
+    private let rowHeight: CGFloat = 22
 
     var body: some View {
-        Group {
-            if state.snapshot == nil, state.errorBanner == "wyd not found" {
-                missingWyd
-            } else if state.snapshot == nil, state.errorBanner == "wyd needs to be updated" {
-                incompatibleWyd
-            } else {
-                menuContent
-            }
+        VStack(spacing: 0) {
+            content
             Divider()
             footer
         }
+        .frame(width: 320)
         .task {
-            // Menu-open refresh: render cache instantly (already done above),
-            // then refresh every 3s until the menu closes.
             await state.refresh()
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
@@ -44,97 +41,163 @@ struct MenuBarView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Content
 
-    private var menuContent: some View {
-        Group {
-            if let banner = state.errorBanner {
-                Section {
-                    Text(banner)
-                    if let detail = state.errorDetail {
-                        Text(detail)
-                            .foregroundStyle(.secondary)
-                    }
+    @ViewBuilder
+    private var content: some View {
+        if state.snapshot == nil {
+            Group {
+                if state.errorBanner == "wyd not found" {
+                    missingWyd
+                } else if state.errorBanner == "wyd needs to be updated" {
+                    incompatibleWyd
+                } else {
+                    ProgressView("Loading…")
                 }
             }
-            if let snapshot = state.snapshot {
-                if !snapshot.projects.isEmpty {
-                    Section("Projects") {
-                        ForEach(snapshot.projects) { project in
-                            ProjectRow(state: state, project: project)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let banner = state.errorBanner {
+                        bannerRow(banner)
+                    }
+                    if let snapshot = state.snapshot {
+                        if !snapshot.projects.isEmpty {
+                            sectionHeader("PROJECTS")
+                            ForEach(snapshot.projects) { project in
+                                ProjectRowView(state: state, project: project)
+                                    .padding(.horizontal, 2)
+                            }
                         }
+                        let services = snapshot.resources.filter {
+                            ["database", "dev_service", "service"].contains($0.kind)
+                        }
+                        if !services.isEmpty {
+                            sectionHeader("SERVICES")
+                            ForEach(services) { resource in
+                                ResourceRowView(
+                                    state: state, resource: resource, hoveredID: $hoveredID)
+                                    .padding(.horizontal, 2)
+                            }
+                        }
+                        if !snapshot.containers.isEmpty {
+                            sectionHeader("DOCKER")
+                            ForEach(snapshot.containers) { container in
+                                ContainerRowView(
+                                    state: state, container: container, hoveredID: $hoveredID)
+                                    .padding(.horizontal, 2)
+                            }
+                        }
+                        let active = activeSessions(snapshot)
+                        sectionHeader("AGENTS")
+                        if active.isEmpty {
+                            Text("No active sessions")
+                                .foregroundStyle(.secondary)
+                                .font(.callout)
+                                .frame(height: rowHeight)
+                        } else {
+                            ForEach(active.prefix(10)) { session in
+                                SessionRowView(state: state, session: session)
+                                    .padding(.horizontal, 2)
+                            }
+                            let ended = snapshot.sessions.filter { $0.status == "ended" }.count
+                            if ended > 0 {
+                                Text("+ \(ended) ended")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                                    .frame(height: 18)
+                            }
+                        }
+                        sectionHeader("LEFTOVERS")
+                        leftovers(snapshot: snapshot)
                     }
                 }
-                let services = snapshot.resources.filter {
-                    ["database", "dev_service", "service"].contains($0.kind)
-                }
-                if !services.isEmpty {
-                    Section("Services") {
-                        ForEach(services) { resource in
-                            ResourceRow(state: state, resource: resource)
-                        }
-                    }
-                }
-                if !snapshot.containers.isEmpty {
-                    Section("Docker") {
-                        ForEach(snapshot.containers) { container in
-                            ContainerRow(state: state, container: container)
-                        }
-                    }
-                }
-                if !snapshot.sessions.isEmpty {
-                    Section("Agents") {
-                        ForEach(snapshot.sessions) { session in
-                            SessionRow(state: state, session: session)
-                        }
-                    }
-                }
-                Section("Leftovers") {
-                    leftovers(snapshot: snapshot)
-                }
-            } else if state.inFlight {
-                Text("Loading…")
-                    .foregroundStyle(.secondary)
             }
         }
     }
 
+    private func activeSessions(_ snapshot: Snapshot) -> [Session] {
+        snapshot.sessions.filter { $0.status != "ended" }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .kerning(0.5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 6)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+    }
+
+    private func bannerRow(_ text: String) -> some View {
+        HStack {
+            Image(systemName: "exclamationmark.triangle")
+            Text(text)
+            Spacer()
+            if let detail = state.errorDetail {
+                Text(detail)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.callout)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color(nsColor: .controlColor))
+    }
+
     private func leftovers(snapshot: Snapshot) -> some View {
-        Group {
-            if snapshot.leftovers.count == 0 {
+        if snapshot.leftovers.count == 0 {
+            return AnyView(
                 Text("Nothing left behind")
                     .foregroundStyle(.secondary)
-            } else {
+                    .font(.callout)
+                    .frame(height: rowHeight, alignment: .leading)
+            )
+        }
+        return AnyView(
+            HStack {
                 Text(
-                    "\(snapshot.leftovers.count) resources · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes)) reclaimable"
+                    "\(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))"
                 )
-                Button("Review…") {
+                Spacer()
+                Button("Review") {
                     Task { await state.fetchCleanupPlan() }
                     openWindow(id: "cleanup")
                 }
+                .controlSize(.small)
             }
-        }
+            .frame(height: rowHeight)
+        )
     }
 
     // MARK: - Engine states
 
     private var missingWyd: some View {
-        Group {
+        VStack(spacing: 8) {
             Text("wyd not found")
+                .fontWeight(.medium)
             Text("wyd-barman requires the wyd engine.")
                 .foregroundStyle(.secondary)
-            Link("Install wyd", destination: WydLocator.installURL)
-            Button("Locate…") { locateBinary() }
+            HStack {
+                Link("Install wyd", destination: WydLocator.installURL)
+                Button("Locate…") { locateBinary() }
+            }
             if let locateError {
                 Text(locateError)
                     .foregroundStyle(.secondary)
+                    .font(.caption)
             }
         }
+        .padding(20)
     }
 
     private var incompatibleWyd: some View {
-        Group {
+        VStack(spacing: 8) {
             Text("wyd needs to be updated")
+                .fontWeight(.medium)
             if let detail = state.errorDetail {
                 Text(detail)
                     .foregroundStyle(.secondary)
@@ -143,6 +206,7 @@ struct MenuBarView: View {
                 Task { await state.refresh() }
             }
         }
+        .padding(20)
     }
 
     private func locateBinary() {
@@ -163,86 +227,138 @@ struct MenuBarView: View {
     // MARK: - Footer
 
     private var footer: some View {
-        Group {
-            Button("Refresh") {
-                Task { await state.refresh() }
+        HStack {
+            Button("Refresh") { Task { await state.refresh() } }
+            Spacer()
+            if let last = state.lastRefresh {
+                Text("\(formatAge(UInt64(Date().timeIntervalSince(last))))")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
             }
-            .keyboardShortcut("r")
             SettingsLink()
-            Button("Quit wyd-barman") {
-                NSApplication.shared.terminate(nil)
-            }
-            .keyboardShortcut("q")
+            Button("Quit") { NSApplication.shared.terminate(nil) }
         }
+        .buttonStyle(.borderless)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
     }
 }
 
 // MARK: - Rows
 
-/// One-line `● Name :port` row with subtle memory metadata; actions live in
-/// the submenu, built verbatim from the engine's `actions` array.
-struct ResourceRow: View {
+/// One-line row: `● name` + right-aligned `:port`; primary action buttons
+/// appear inline on hover, built verbatim from the engine's `actions` array.
+struct ResourceRowView: View {
     @Bindable var state: AppState
     let resource: Resource
+    @Binding var hoveredID: String?
     @State private var confirmingKill = false
 
     var body: some View {
-        Menu {
-            actionButtons
-            Divider()
-            details
-        } label: {
-            rowLabel
-        }
-    }
-
-    private var rowLabel: some View {
-        HStack {
-            Text("● \(resource.name)")
+        HStack(spacing: 6) {
+            Text("●")
+                .font(.caption)
+            Text(resource.name)
+                .lineLimit(1)
             Spacer()
             if let port = resource.port {
                 Text(":\(port)")
                     .foregroundStyle(.secondary)
+                    .font(.callout)
+            }
+            if hoveredID == resource.id {
+                HStack(spacing: 2) {
+                    ForEach(primaryActions, id: \.self) { token in
+                        actionButton(token)
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 6)
+        .frame(height: 22)
+        .background(isHovered ? Color(nsColor: .controlAccentColor).opacity(0.12) : Color.clear)
+        .cornerRadius(4)
+        .onHover { hovering in
+            hoveredID = hovering ? resource.id : nil
+        }
+        .contextMenu {
+            contextItems
+        }
+        .confirmationDialog(
+            "Force kill \(resource.name)?",
+            isPresented: $confirmingKill,
+            titleVisibility: .visible
+        ) {
+            Button("Force Kill", role: .destructive) {
+                Task {
+                    await state.perform(
+                        target: resource.id, action: .kill, displayName: resource.name)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private var isHovered: Bool { hoveredID == resource.id }
+
+    /// Open (if url) + start/stop/restart as supplied by the engine. Kill is
+    /// reserved for the context menu with confirmation.
+    private var primaryActions: [String] {
+        resource.actions.filter { $0 != "kill" }
+    }
+
+    @ViewBuilder
+    private func actionButton(_ token: String) -> some View {
+        if token == "open", let urlString = resource.url, let url = URL(string: urlString) {
+            smallButton("arrow.up.right.circle", help: "Open") { NSWorkspace.shared.open(url) }
+        } else if let action = ResourceAction(rawValue: token), action != .open, action != .kill {
+            let icon = action == .stop ? "stop.circle"
+                : action == .start ? "play.circle" : "arrow.clockwise.circle"
+            smallButton(icon, help: actionLabel(action)) {
+                Task {
+                    await state.perform(
+                        target: resource.id, action: action, displayName: resource.name)
+                }
             }
         }
     }
 
-    private var actionButtons: some View {
+    private func smallButton(
+        _ systemName: String, help: String, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13))
+                .frame(width: 18, height: 18)
+        }
+        .buttonStyle(.borderless)
+        .help(help)
+    }
+
+    private var contextItems: some View {
         Group {
-            ForEach(resource.actions, id: \.self) { token in
+            ForEach(primaryActions, id: \.self) { token in
                 if token == "open", let urlString = resource.url, let url = URL(string: urlString) {
-                    Button("Open") {
-                        NSWorkspace.shared.open(url)
-                    }
+                    Button("Open") { NSWorkspace.shared.open(url) }
                 } else if let action = ResourceAction(rawValue: token), action != .open,
                     action != .kill
                 {
                     Button(actionLabel(action)) {
                         Task {
                             await state.perform(
-                                target: resource.id, action: action,
-                                displayName: resource.name)
+                                target: resource.id, action: action, displayName: resource.name)
                         }
                     }
                 }
             }
             if resource.actions.contains("kill") {
                 Divider()
-                Button("Force Kill…") { confirmingKill = true }
-                    .confirmationDialog(
-                        "Force kill \(resource.name)?",
-                        isPresented: $confirmingKill,
-                        titleVisibility: .visible
-                    ) {
-                        Button("Force Kill", role: .destructive) {
-                            Task {
-                                await state.perform(
-                                    target: resource.id, action: .kill,
-                                    displayName: resource.name)
-                            }
-                        }
-                        Button("Cancel", role: .cancel) {}
-                    }
+                Button("Force Kill…", role: .destructive) { confirmingKill = true }
+            }
+            if let pid = resource.pid {
+                Divider()
+                Text("PID \(pid) · \(formatBytes(resource.memoryBytes))")
             }
         }
     }
@@ -253,30 +369,12 @@ struct ResourceRow: View {
         case .start: "Start"
         case .stop: "Stop"
         case .restart: "Restart"
-        case .kill: "Kill"
+        case .kill: "Force Kill"
         }
-    }
-
-    private var details: some View {
-        Text(detailsText)
-            .foregroundStyle(.secondary)
-    }
-
-    private var detailsText: String {
-        var parts: [String] = []
-        if let pid = resource.pid { parts.append("PID \(pid)") }
-        parts.append(formatBytes(resource.memoryBytes))
-        if resource.cpuPercent > 0 {
-            parts.append(String(format: "%.1f%% CPU", resource.cpuPercent))
-        }
-        if !resource.reasons.isEmpty {
-            parts.append(resource.reasons.joined(separator: "; "))
-        }
-        return parts.joined(separator: " · ")
     }
 }
 
-struct ProjectRow: View {
+struct ProjectRowView: View {
     @Bindable var state: AppState
     let project: Project
     @State private var confirmingStop = false
@@ -286,33 +384,49 @@ struct ProjectRow: View {
     }
 
     var body: some View {
-        Menu {
+        DisclosureGroup {
             ForEach(state.members(of: project)) { resource in
-                ResourceRow(state: state, resource: resource)
-            }
-            Divider()
-            Button("Stop…") { stopTapped() }
-                .confirmationDialog(
-                    "Stop \(project.name)?",
-                    isPresented: $confirmingStop,
-                    titleVisibility: .visible
-                ) {
-                    Button("Stop", role: .destructive) { stop() }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text(
-                        "\(project.resourceCount) resources · \(formatBytes(project.memoryBytes))"
-                    )
+                HStack(spacing: 6) {
+                    Text("·")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(resource.name).lineLimit(1)
+                    Spacer()
+                    if let port = resource.port {
+                        Text(":\(port)").foregroundStyle(.secondary).font(.callout)
+                    }
                 }
+                .padding(.leading, 14)
+                .frame(height: 20)
+            }
         } label: {
-            VStack(alignment: .leading) {
-                Text("● \(project.name)")
-                Text(
-                    "\(project.agent ?? "unknown agent") · \(project.resourceCount) resources · \(formatBytes(project.memoryBytes))"
-                )
-                .foregroundStyle(.secondary)
+            HStack {
+                Text("\(project.name)")
+                    .font(.callout)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                Spacer()
+                Text(formatBytes(project.memoryBytes))
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                Button("Stop") { stopTapped() }
+                    .controlSize(.small)
+                    .confirmationDialog(
+                        "Stop \(project.name)?",
+                        isPresented: $confirmingStop,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Stop", role: .destructive) { stop() }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text(
+                            "\(project.resourceCount) resources · \(formatBytes(project.memoryBytes))"
+                        )
+                    }
             }
         }
+        .font(.callout)
+        .padding(.horizontal, 6)
     }
 
     private func stopTapped() {
@@ -330,56 +444,59 @@ struct ProjectRow: View {
     }
 }
 
-struct ContainerRow: View {
+struct ContainerRowView: View {
     @Bindable var state: AppState
     let container: Container
+    @Binding var hoveredID: String?
 
     var body: some View {
-        Menu {
-            ForEach(container.actions, id: \.self) { token in
+        HStack(spacing: 6) {
+            Text("●")
+                .font(.caption)
+            Text(container.name).lineLimit(1)
+            Spacer()
+            Text(container.status)
+                .foregroundStyle(.secondary)
+                .font(.callout)
+            ForEach(primaryActions, id: \.self) { token in
                 if let action = ResourceAction(rawValue: token) {
-                    Button(actionButtonLabel(action)) {
+                    Button(
+                        action == .start ? "Start" : action == .stop ? "Stop" : "Restart"
+                    ) {
                         Task {
                             await state.perform(
-                                target: container.id, action: action,
-                                displayName: container.name)
+                                target: container.id, action: action, displayName: container.name)
                         }
                     }
+                    .controlSize(.small)
                 }
             }
-        } label: {
-            HStack {
-                Text("● \(container.name)")
-                Spacer()
-                Text(container.status)
-                    .foregroundStyle(.secondary)
-            }
         }
+        .padding(.horizontal, 6)
+        .frame(height: 22)
     }
 
-    private func actionButtonLabel(_ action: ResourceAction) -> String {
-        switch action {
-        case .open: "Open"
-        case .start: "Start"
-        case .stop: "Stop"
-        case .restart: "Restart"
-        case .kill: "Force Kill"
-        }
+    private var primaryActions: [String] {
+        container.actions
     }
 }
 
-struct SessionRow: View {
+struct SessionRowView: View {
     @Bindable var state: AppState
     let session: Session
 
     var body: some View {
         HStack {
-            Text("● \(session.agent)")
+            Text("\(session.agent)")
+                .lineLimit(1)
             Spacer()
             Text(
-                "\(state.name(forProjectID: session.projectID) ?? "no project") · \(session.status) · \(formatAge(session.ageSeconds))"
+                "\(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))"
             )
             .foregroundStyle(.secondary)
+            .font(.callout)
         }
+        .padding(.horizontal, 6)
+        .frame(height: 22)
     }
 }
