@@ -137,19 +137,19 @@ struct Resource: Codable, Identifiable {
         actions = try c.decode([String].self, forKey: .actions)
     }
 }
-
 struct Container: Codable, Identifiable {
     let id: String
     let name: String
     let composeProject: String?
     let ports: [Int]
+    let url: String?
     let status: String
     let sizeBytes: UInt64
     let actions: [String]
     let estimatedReclaimBytes: UInt64
 
     enum CodingKeys: String, CodingKey {
-        case id, name, status, actions
+        case id, name, status, actions, url
         case composeProject = "compose_project"
         case ports
         case sizeBytes = "size_bytes"

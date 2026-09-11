@@ -69,20 +69,33 @@ struct MenuBarView: View {
                         }
                     }
                 }
-                // Quick launch: everything running with a URL, one click to
-                // open in the browser (URL supplied by the engine only).
-                let frontends = snapshot.resources.filter {
+                // Quick launch: everything running with a URL (dev servers,
+                // docker-published frontends), one click to open in the
+                // browser (URL supplied by the engine only).
+                let frontendResources = snapshot.resources.filter {
                     $0.url != nil && $0.actions.contains("open")
                 }
-                if !frontends.isEmpty {
+                let frontendContainers = snapshot.containers.filter { $0.url != nil }
+                if !frontendResources.isEmpty || !frontendContainers.isEmpty {
                     Section("FRONTENDS") {
-                        ForEach(frontends) { resource in
+                        ForEach(frontendResources) { resource in
                             Button {
                                 if let urlString = resource.url, let url = URL(string: urlString) {
                                     NSWorkspace.shared.open(url)
                                 }
                             } label: {
                                 Label(resourceLabel(resource), systemImage: "globe")
+                            }
+                        }
+                        ForEach(frontendContainers) { container in
+                            Button {
+                                if let urlString = container.url, let url = URL(string: urlString) {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            } label: {
+                                Label(
+                                    "\(container.name)  :\(container.ports.first.map(String.init) ?? "")",
+                                    systemImage: "globe")
                             }
                         }
                     }
