@@ -1,29 +1,14 @@
 import Foundation
 
-enum RefreshFrequency: String, CaseIterable {
-    case auto = "Auto"
-    case frequent = "Frequent"
-    case paused = "Paused"
-
-    /// Menu-closed background interval. The open menu refreshes every 3s
-    /// from the view itself; both paths share the `inFlight` guard.
-    var backgroundInterval: TimeInterval? {
-        switch self {
-        case .auto: 20
-        case .frequent: 5
-        case .paused: nil
-        }
-    }
-}
-
 enum SettingsKeys {
-    static let refreshFrequency = "refreshFrequency"
     static let confirmProjectStop = "confirmProjectStop"
     static let confirmCleanup = "confirmCleanup"
+    static let preventSleep = "preventSleep"
 }
 
-/// Cached `wyd` snapshot plus refresh policy. Menu content renders this
-/// cache instantly; refreshes happen asynchronously and never overlap.
+/// Cached `wyd` snapshot plus refresh policy. No background refreshes when
+/// the menu is closed: refresh happens on menu open and every 10s while open
+/// (the menu's `.task`), never overlapping via `inFlight`.
 @Observable
 @MainActor
 final class AppState {
@@ -35,43 +20,22 @@ final class AppState {
     var cleanupPlan: CleanupPlan?
     var cleanupSelection = Set<String>()
     var wydVersion: String?
+    var preventSleep = UserDefaults.standard.bool(forKey: SettingsKeys.preventSleep) {
+        didSet {
+            UserDefaults.standard.set(preventSleep, forKey: SettingsKeys.preventSleep)
+            SleepPreventer.shared.setActive(preventSleep)
+        }
+    }
 
     nonisolated let client: any WydClient
 
     init(client: any WydClient = ProcessWydClient()) {
         self.client = client
-        if UserDefaults.standard.string(forKey: SettingsKeys.refreshFrequency) == nil {
-            UserDefaults.standard.set(RefreshFrequency.auto.rawValue, forKey: SettingsKeys.refreshFrequency)
-        }
-        // Closed-menu refresh keeps the cached snapshot warm (20s/5s/off);
-        // the open menu drives its own 3s loop via `.task`.
-        Task { await startBackgroundRefresh() }
-    }
-
-    var frequency: RefreshFrequency {
-        get {
-            RefreshFrequency(
-                rawValue: UserDefaults.standard.string(forKey: SettingsKeys.refreshFrequency) ?? ""
-            ) ?? .auto
-        }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: SettingsKeys.refreshFrequency) }
-    }
-
-    /// Closed-menu background refresh: every `frequency` interval, unless
-    /// Paused. The open-menu loop drives its own 3s refreshes; `inFlight`
-    /// drops any overlap between the two.
-    func startBackgroundRefresh() async {
-        while !Task.isCancelled {
-            if let interval = frequency.backgroundInterval {
-                try? await Task.sleep(for: .seconds(interval))
-                await refresh()
-            } else {
-                try? await Task.sleep(for: .seconds(30))
-            }
+        if UserDefaults.standard.bool(forKey: SettingsKeys.preventSleep) {
+            SleepPreventer.shared.setActive(true)
         }
     }
-
-    func refresh() async {
+func refresh() async {
         guard !inFlight else { return }
         inFlight = true
         defer { inFlight = false }

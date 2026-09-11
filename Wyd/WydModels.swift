@@ -6,6 +6,7 @@ struct Snapshot: Codable {
     let schemaVersion: Int
     let wydVersion: String
     let generatedAt: String
+    let system: SystemMetrics
     let projects: [Project]
     let sessions: [Session]
     let resources: [Resource]
@@ -16,7 +17,36 @@ struct Snapshot: Codable {
         case schemaVersion = "schema_version"
         case wydVersion = "wyd_version"
         case generatedAt = "generated_at"
-        case projects, sessions, resources, containers, leftovers
+        case system, projects, sessions, resources, containers, leftovers
+    }
+}
+
+/// Host gauges for the one-line menu status (measured by the engine).
+struct SystemMetrics: Codable {
+    let cpuPercent: Float
+    let usedMemoryBytes: UInt64
+    let totalMemoryBytes: UInt64
+    let freeDiskBytes: UInt64
+
+    enum CodingKeys: String, CodingKey {
+        case cpuPercent = "cpu_percent"
+        case usedMemoryBytes = "used_memory_bytes"
+        case totalMemoryBytes = "total_memory_bytes"
+        case freeDiskBytes = "free_disk_bytes"
+    }
+
+    var memoryUsedPercent: Int {
+        guard totalMemoryBytes > 0 else { return 0 }
+        return Int((Double(usedMemoryBytes) / Double(totalMemoryBytes) * 100).rounded())
+    }
+
+    var oneLine: String {
+        "CPU \(Int(cpuPercent.rounded()))% · RAM \(memoryUsedPercent)% · Disk \(formattedFree) free"
+    }
+
+    private var formattedFree: String {
+        let gb = Double(freeDiskBytes) / 1_000_000_000
+        return gb < 1 ? "\(Int(Double(freeDiskBytes) / 1_000_000)) MB" : String(format: "%.0f GB", gb)
     }
 }
 

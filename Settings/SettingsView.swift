@@ -2,13 +2,11 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-/// Minimal settings: launch at login, refresh cadence, engine binary, and
+/// Minimal settings: launch at login, keep-awake, engine binary, and
 /// confirmation behavior. No discovery/ownership/cleanup rules — those
-/// belong in `wyd`.
+/// belong in `wyd`. (Refresh is fixed: on open + every 10s while open.)
 struct SettingsView: View {
     @Bindable var state: AppState
-    @AppStorage(SettingsKeys.refreshFrequency) private var frequencyRaw: String =
-        RefreshFrequency.auto.rawValue
     @AppStorage(SettingsKeys.confirmProjectStop) private var confirmProjectStop = true
     @AppStorage(SettingsKeys.confirmCleanup) private var confirmCleanup = true
     @AppStorage(WydLocator.overrideKey) private var binaryPath = ""
@@ -26,11 +24,7 @@ struct SettingsView: View {
                     Text(loginError)
                         .foregroundStyle(.red)
                 }
-                Picker("Refresh frequency", selection: $frequencyRaw) {
-                    ForEach(RefreshFrequency.allCases, id: \.rawValue) { option in
-                        Text(option.rawValue).tag(option.rawValue)
-                    }
-                }
+                Toggle("Keep Mac awake (no sleep / no screen saver)", isOn: $state.preventSleep)
             }
             Section("wyd") {
                 HStack {

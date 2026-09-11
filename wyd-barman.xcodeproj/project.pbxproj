@@ -13,6 +13,7 @@
 		AAAAAAAA0000000000000014 /* WydLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000024 /* WydLocator.swift */; };
 		AAAAAAAA0000000000000015 /* WydModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000025 /* WydModels.swift */; };
 		AAAAAAAA0000000000000016 /* WydError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000026 /* WydError.swift */; };
+		AAAAAAAA000000000000001B /* SleepPreventer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA000000000000002D /* SleepPreventer.swift */; };
 		AAAAAAAA0000000000000017 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000027 /* AppState.swift */; };
 		AAAAAAAA0000000000000018 /* CleanupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000028 /* CleanupView.swift */; };
 		AAAAAAAA0000000000000019 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000029 /* SettingsView.swift */; };
@@ -29,6 +30,7 @@
 		AAAAAAAA0000000000000027 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		AAAAAAAA0000000000000028 /* CleanupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupView.swift; sourceTree = "<group>"; };
 		AAAAAAAA0000000000000029 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AAAAAAAA000000000000002D /* SleepPreventer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepPreventer.swift; sourceTree = "<group>"; };
 		AAAAAAAA000000000000002A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AAAAAAAA000000000000002B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AAAAAAAA000000000000002C /* wyd-barman.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "wyd-barman.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,6 +85,7 @@
 				AAAAAAAA0000000000000024 /* WydLocator.swift */,
 				AAAAAAAA0000000000000025 /* WydModels.swift */,
 				AAAAAAAA0000000000000026 /* WydError.swift */,
+				AAAAAAAA000000000000002D /* SleepPreventer.swift */,
 			);
 			path = Wyd;
 			sourceTree = "<group>";
@@ -195,6 +198,7 @@
 				AAAAAAAA0000000000000017 /* AppState.swift in Sources */,
 				AAAAAAAA0000000000000018 /* CleanupView.swift in Sources */,
 				AAAAAAAA0000000000000019 /* SettingsView.swift in Sources */,
+				AAAAAAAA000000000000001B /* SleepPreventer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

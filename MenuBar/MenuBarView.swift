@@ -41,11 +41,12 @@ struct MenuBarView: View {
             footer
         }
         .task {
-            // Menu-open refresh: render cache instantly, then refresh every 3s
-            // until the menu closes (native menu content only lives while open).
+            // Open-menu refresh: render cache instantly, then refresh every
+            // 10s until the menu closes (native menu content only lives
+            // while open). No background refresh when closed.
             await state.refresh()
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
+                try? await Task.sleep(for: .seconds(10))
                 await state.refresh()
             }
         }
@@ -53,6 +54,12 @@ struct MenuBarView: View {
 
     private var menuItems: some View {
         Group {
+            if let snapshot = state.snapshot {
+                Section("STATUS") {
+                    Text(snapshot.system.oneLine)
+                        .font(.callout)
+                }
+            }
             if let banner = state.errorBanner {
                 Section {
                     Text(banner).foregroundStyle(.red)
@@ -159,6 +166,7 @@ struct MenuBarView: View {
 
     private var footer: some View {
         Group {
+            Toggle("Keep awake", isOn: $state.preventSleep)
             Button("Refresh") { Task { await state.refresh() } }
                 .keyboardShortcut("r")
             SettingsLink()
