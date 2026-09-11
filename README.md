@@ -1,14 +1,15 @@
-![wyd-barman](logo.svg)
-
-# wyd-barman
-
-Tiny native macOS menu-bar remote control for [wyd](https://wyd.sh) — the engine.
-No Dock icon, ~1 MB, near-zero idle CPU. Renders a cached `wyd barman snapshot`,
-routes every action through `wyd`, never scans processes itself.
-
-> Intelligence belongs in `wyd`. Convenience belongs in `wyd-barman`.
+<p align="center">
+  <img src="logo.svg" width="72" alt="wyd-barman"><br>
+  <h1 align="center">wyd-barman</h1>
+  <p align="center">Tiny native macOS menu-bar remote control for
+  <a href="https://wyd.sh">wyd</a> — the engine. No Dock icon, ~1 MB,
+  near-zero idle CPU.<br>
+  <em>Intelligence belongs in <code>wyd</code>. Convenience belongs in
+  <code>wyd-barman</code>.</em></p>
+</p>
 
 ![wyd-barman menu](wyd-barmen.png)
+
 
 ## What you get
 
