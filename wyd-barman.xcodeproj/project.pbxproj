@@ -1,0 +1,295 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AAAAAAAA0000000000000011 /* WydBarmanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000021 /* WydBarmanApp.swift */; };
+		AAAAAAAA0000000000000012 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000022 /* MenuBarView.swift */; };
+		AAAAAAAA0000000000000013 /* WydClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000023 /* WydClient.swift */; };
+		AAAAAAAA0000000000000014 /* WydLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000024 /* WydLocator.swift */; };
+		AAAAAAAA0000000000000015 /* WydModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000025 /* WydModels.swift */; };
+		AAAAAAAA0000000000000016 /* WydError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000026 /* WydError.swift */; };
+		AAAAAAAA0000000000000017 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000027 /* AppState.swift */; };
+		AAAAAAAA0000000000000018 /* CleanupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000028 /* CleanupView.swift */; };
+		AAAAAAAA0000000000000019 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000029 /* SettingsView.swift */; };
+		AAAAAAAA000000000000001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA000000000000002A /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AAAAAAAA0000000000000021 /* WydBarmanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WydBarmanApp.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000022 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000023 /* WydClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WydClient.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000024 /* WydLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WydLocator.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000025 /* WydModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WydModels.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000026 /* WydError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WydError.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000027 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000028 /* CleanupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupView.swift; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000029 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AAAAAAAA000000000000002A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AAAAAAAA000000000000002B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AAAAAAAA000000000000002C /* wyd-barman.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "wyd-barman.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AAAAAAAA0000000000000031 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AAAAAAAA0000000000000001 /* wyd-barman */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA000000000000000A /* App */,
+				AAAAAAAA000000000000000B /* MenuBar */,
+				AAAAAAAA000000000000000C /* Wyd */,
+				AAAAAAAA000000000000000D /* State */,
+				AAAAAAAA000000000000000E /* Cleanup */,
+				AAAAAAAA000000000000000F /* Settings */,
+				AAAAAAAA000000000000002A /* Assets.xcassets */,
+				AAAAAAAA000000000000002B /* Info.plist */,
+				AAAAAAAA0000000000000010 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AAAAAAAA000000000000000A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA0000000000000021 /* WydBarmanApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AAAAAAAA000000000000000B /* MenuBar */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA0000000000000022 /* MenuBarView.swift */,
+			);
+			path = MenuBar;
+			sourceTree = "<group>";
+		};
+		AAAAAAAA000000000000000C /* Wyd */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA0000000000000023 /* WydClient.swift */,
+				AAAAAAAA0000000000000024 /* WydLocator.swift */,
+				AAAAAAAA0000000000000025 /* WydModels.swift */,
+				AAAAAAAA0000000000000026 /* WydError.swift */,
+			);
+			path = Wyd;
+			sourceTree = "<group>";
+		};
+		AAAAAAAA000000000000000D /* State */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA0000000000000027 /* AppState.swift */,
+			);
+			path = State;
+			sourceTree = "<group>";
+		};
+		AAAAAAAA000000000000000E /* Cleanup */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA0000000000000028 /* CleanupView.swift */,
+			);
+			path = Cleanup;
+			sourceTree = "<group>";
+		};
+		AAAAAAAA000000000000000F /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA0000000000000029 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		AAAAAAAA0000000000000010 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AAAAAAAA000000000000002C /* wyd-barman.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AAAAAAAA0000000000000002 /* wyd-barman */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAAAAAAA0000000000000004 /* Build configuration list for PBXNativeTarget "wyd-barman" */;
+			buildPhases = (
+				AAAAAAAA0000000000000032 /* Sources */,
+				AAAAAAAA0000000000000031 /* Frameworks */,
+				AAAAAAAA0000000000000033 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "wyd-barman";
+			productName = "wyd-barman";
+			productReference = AAAAAAAA000000000000002C /* wyd-barman.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AAAAAAAA0000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				TargetAttributes = {
+					AAAAAAAA0000000000000002 /* wyd-barman */ = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = AAAAAAAA0000000000000003 /* Build configuration list for PBXProject "wyd-barman" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = AAAAAAAA0000000000000001 /* wyd-barman */;
+			productRefGroup = AAAAAAAA0000000000000010 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AAAAAAAA0000000000000002 /* wyd-barman */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AAAAAAAA0000000000000033 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAAAAAA000000000000001A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AAAAAAAA0000000000000032 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAAAAAA0000000000000011 /* WydBarmanApp.swift in Sources */,
+				AAAAAAAA0000000000000012 /* MenuBarView.swift in Sources */,
+				AAAAAAAA0000000000000013 /* WydClient.swift in Sources */,
+				AAAAAAAA0000000000000014 /* WydLocator.swift in Sources */,
+				AAAAAAAA0000000000000015 /* WydModels.swift in Sources */,
+				AAAAAAAA0000000000000016 /* WydError.swift in Sources */,
+				AAAAAAAA0000000000000017 /* AppState.swift in Sources */,
+				AAAAAAAA0000000000000018 /* CleanupView.swift in Sources */,
+				AAAAAAAA0000000000000019 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AAAAAAAA0000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AAAAAAAA0000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AAAAAAAA0000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "sh.wyd.barman";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AAAAAAAA0000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "sh.wyd.barman";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AAAAAAAA0000000000000003 /* Build configuration list for PBXProject "wyd-barman" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAAAAAA0000000000000005 /* Debug */,
+				AAAAAAAA0000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AAAAAAAA0000000000000004 /* Build configuration list for PBXNativeTarget "wyd-barman" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAAAAAA0000000000000007 /* Debug */,
+				AAAAAAAA0000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AAAAAAAA0000000000000000 /* Project object */;
+}
