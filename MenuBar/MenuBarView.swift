@@ -292,7 +292,7 @@ struct ProjectRow: View {
             // Concatenated Text stays a single text run (menu-safe) while
             // embedding the RAM glyph inline.
             Label {
-                Text(project.name + "  ")
+                Text(project.name + " ")
                     + Text(Image(systemName: "memorychip"))
                     + Text(" " + formatBytes(project.memoryBytes))
             } icon: {
