@@ -34,8 +34,20 @@ final class AppState {
         if UserDefaults.standard.bool(forKey: SettingsKeys.preventSleep) {
             SleepPreventer.shared.setActive(true)
         }
+        // Closed-menu background poll: every 3 minutes, so opening the menu
+        // shows fresh-enough data instantly. The open menu refreshes on open
+        // + every 10s; `inFlight` drops overlaps.
+        Task { await startBackgroundRefresh() }
     }
-func refresh() async {
+
+    func startBackgroundRefresh() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(180))
+            await refresh()
+        }
+    }
+
+    func refresh() async {
         guard !inFlight else { return }
         inFlight = true
         defer { inFlight = false }
