@@ -11,7 +11,7 @@ struct WydBarmanApp: App {
         } label: {
             menuIcon()
         }
-        .menuBarExtraStyle(.window)
+        .menuBarExtraStyle(.menu)
 
         Settings {
             SettingsView(state: state)

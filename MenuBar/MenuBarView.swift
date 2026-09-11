@@ -14,49 +14,35 @@ func formatAge(_ seconds: UInt64) -> String {
     return "\(seconds / 86_400)d"
 }
 
-// MARK: - Action icon map
-
-enum ActionIcon {
-    static func symbol(_ token: String) -> String {
-        switch token {
-        case "open": "arrow.up.right"
-        case "start": "play.fill"
-        case "stop": "stop.fill"
-        case "restart": "arrow.clockwise"
-        default: "circle"
-        }
-    }
-
-    static func help(_ token: String) -> String {
-        switch token {
-        case "open": "Open"
-        case "start": "Start"
-        case "stop": "Stop"
-        case "restart": "Restart"
-        default: token
-        }
-    }
-}
-
-/// Compact window-style panel (`.menuBarExtraStyle(.window)`). Rows are
-/// single-line with always-visible SF Symbol action buttons built verbatim
-/// from the engine's `actions` array — no hover-reveal plumbing, so mouse
-/// movement never rebuilds the tree. Force Kill lives in the context menu.
+/// Native AppKit menu (`.menuBarExtraStyle(.menu)`): the system renders and
+/// opens it instantly, no window juggling. Sections render via `Section`
+/// headers; every resource row is a submenu of action items built verbatim
+/// from the engine's `actions` array. Force Kill is a two-step submenu —
+/// native menus close before any dialog, so no `confirmationDialog` here.
 struct MenuBarView: View {
     @Bindable var state: AppState
-    @Environment(\.openWindow) private var openWindow
-    @State private var locateError: String?
-
-    private let rowHeight: CGFloat = 24
 
     var body: some View {
-        VStack(spacing: 0) {
-            content
+        Group {
+            if state.snapshot == nil {
+                Group {
+                    if state.errorBanner == "wyd not found" {
+                        missingWyd
+                    } else if state.errorBanner == "wyd needs to be updated" {
+                        incompatibleWyd
+                    } else {
+                        ProgressView("Loading…")
+                    }
+                }
+            } else {
+                menuItems
+            }
             Divider()
             footer
         }
-        .frame(width: 300)
         .task {
+            // Menu-open refresh: render cache instantly, then refresh every 3s
+            // until the menu closes (native menu content only lives while open).
             await state.refresh()
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
@@ -65,164 +51,96 @@ struct MenuBarView: View {
         }
     }
 
-    // MARK: - Content
-
-    @ViewBuilder
-    private var content: some View {
-        if state.snapshot == nil {
-            Group {
-                if state.errorBanner == "wyd not found" {
-                    missingWyd
-                } else if state.errorBanner == "wyd needs to be updated" {
-                    incompatibleWyd
-                } else {
-                    ProgressView("Loading…")
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let banner = state.errorBanner {
-                        bannerRow(banner)
-                    }
-                    if let snapshot = state.snapshot {
-                        if !snapshot.projects.isEmpty {
-                            sectionHeader("PROJECTS")
-                            ForEach(snapshot.projects) { project in
-                                ProjectRowView(state: state, project: project)
-                                    .padding(.horizontal, 4)
-                            }
-                        }
-                        let services = snapshot.resources.filter {
-                            ["database", "dev_service", "service"].contains($0.kind)
-                        }
-                        if !services.isEmpty {
-                            sectionHeader("SERVICES")
-                            ForEach(services) { resource in
-                                ResourceRowView(state: state, resource: resource)
-                                    .padding(.horizontal, 4)
-                            }
-                        }
-                        if !snapshot.containers.isEmpty {
-                            sectionHeader("DOCKER")
-                            ForEach(snapshot.containers) { container in
-                                ContainerRowView(state: state, container: container)
-                                    .padding(.horizontal, 4)
-                            }
-                        }
-                        sectionHeader("AGENTS")
-                        let active = snapshot.sessions.filter { $0.status != "ended" }
-                        if active.isEmpty {
-                            Text("No active sessions")
-                                .foregroundStyle(.secondary)
-                                .font(.callout)
-                                .frame(height: rowHeight, alignment: .leading)
-                        } else {
-                            ForEach(active.prefix(10)) { session in
-                                SessionRowView(state: state, session: session)
-                                    .padding(.horizontal, 4)
-                            }
-                            let ended = snapshot.sessions.filter { $0.status == "ended" }.count
-                            if ended > 0 {
-                                Text("+ \(ended) ended")
-                                    .foregroundStyle(.secondary)
-                                    .font(.caption)
-                                    .frame(height: 16)
-                            }
-                        }
-                        sectionHeader("LEFTOVERS")
-                        leftovers(snapshot: snapshot)
+    private var menuItems: some View {
+        Group {
+            if let banner = state.errorBanner {
+                Section {
+                    Text(banner).foregroundStyle(.red)
+                    if let detail = state.errorDetail {
+                        Text(detail).foregroundStyle(.secondary)
                     }
                 }
             }
-        }
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.secondary)
-            .kerning(0.5)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 6)
-            .padding(.top, 8)
-            .padding(.bottom, 2)
-    }
-
-    private func bannerRow(_ text: String) -> some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle")
-            Text(text)
-            Spacer()
-            if let detail = state.errorDetail {
-                Text(detail)
-                    .foregroundStyle(.secondary)
+            if let snapshot = state.snapshot {
+                if !snapshot.projects.isEmpty {
+                    Section("PROJECTS") {
+                        ForEach(snapshot.projects) { project in
+                            ProjectRow(state: state, project: project)
+                        }
+                    }
+                }
+                let services = snapshot.resources.filter {
+                    ["database", "dev_service", "service"].contains($0.kind)
+                }
+                if !services.isEmpty {
+                    Section("SERVICES") {
+                        ForEach(services) { resource in
+                            ResourceRow(state: state, resource: resource)
+                        }
+                    }
+                }
+                if !snapshot.containers.isEmpty {
+                    Section("DOCKER") {
+                        ForEach(snapshot.containers) { container in
+                            ContainerRow(state: state, container: container)
+                        }
+                    }
+                }
+                let active = snapshot.sessions.filter { $0.status != "ended" }
+                if !active.isEmpty {
+                    Section("AGENTS") {
+                        ForEach(active.prefix(10)) { session in
+                            SessionRow(state: state, session: session)
+                        }
+                        let ended = snapshot.sessions.filter { $0.status == "ended" }.count
+                        if ended > 0 {
+                            Text("+ \(ended) ended").foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Section("LEFTOVERS") {
+                    leftovers(snapshot: snapshot)
+                }
             }
         }
-        .font(.callout)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color(nsColor: .controlColor))
     }
 
     @ViewBuilder
     private func leftovers(snapshot: Snapshot) -> some View {
         if snapshot.leftovers.count == 0 {
-            Text("Nothing left behind")
-                .foregroundStyle(.secondary)
-                .font(.callout)
-                .frame(height: rowHeight, alignment: .leading)
+            Text("Nothing left behind").foregroundStyle(.secondary)
         } else {
-            HStack {
-                Text(
-                    "\(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))"
-                )
-                Spacer()
-                Button("Review") {
-                    Task { await state.fetchCleanupPlan() }
-                    openWindow(id: "cleanup")
-                }
-                .controlSize(.small)
+            Button("Review \(snapshot.leftovers.count) · \(formatBytes(snapshot.leftovers.estimatedReclaimBytes))") {
+                Task { await state.fetchCleanupPlan() }
+                openCleanup()
             }
-            .frame(height: rowHeight)
         }
+    }
+
+    @Environment(\.openWindow) private var openWindow
+    private func openCleanup() {
+        openWindow(id: "cleanup")
     }
 
     // MARK: - Engine states
 
     private var missingWyd: some View {
-        VStack(spacing: 8) {
+        Group {
             Text("wyd not found")
-                .fontWeight(.medium)
-            Text("wyd-barman requires the wyd engine.")
-                .foregroundStyle(.secondary)
-            HStack {
-                Link("Install wyd", destination: WydLocator.installURL)
-                Button("Locate…") { locateBinary() }
-            }
-            if let locateError {
-                Text(locateError)
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
+            Text("wyd-barman requires the wyd engine.").foregroundStyle(.secondary)
+            Link("Install wyd", destination: WydLocator.installURL)
+            Button("Locate…") { locateBinary() }
         }
-        .padding(20)
     }
 
     private var incompatibleWyd: some View {
-        VStack(spacing: 8) {
+        Group {
             Text("wyd needs to be updated")
-                .fontWeight(.medium)
             if let detail = state.errorDetail {
-                Text(detail)
-                    .foregroundStyle(.secondary)
+                Text(detail).foregroundStyle(.secondary)
             }
-            Button("Check again") {
-                Task { await state.refresh() }
-            }
+            Button("Check again") { Task { await state.refresh() } }
         }
-        .padding(20)
     }
 
     private func locateBinary() {
@@ -233,98 +151,39 @@ struct MenuBarView: View {
         panel.directoryURL = URL(fileURLWithPath: "/opt/homebrew/bin")
         if panel.runModal() == .OK, let url = panel.url {
             UserDefaults.standard.set(url.path, forKey: WydLocator.overrideKey)
-            locateError = nil
             Task { await state.refresh() }
-        } else {
-            locateError = "No binary selected."
         }
     }
 
     // MARK: - Footer
 
     private var footer: some View {
-        HStack {
+        Group {
             Button("Refresh") { Task { await state.refresh() } }
-            Spacer()
-            if let last = state.lastRefresh {
-                Text("\(formatAge(UInt64(Date().timeIntervalSince(last))))")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
+                .keyboardShortcut("r")
             SettingsLink()
-            Button("Quit") { NSApplication.shared.terminate(nil) }
+            Button("Quit wyd-barman") { NSApplication.shared.terminate(nil) }
+                .keyboardShortcut("q")
         }
-        .buttonStyle(.borderless)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
     }
 }
 
-// MARK: - Row: plain button row with trailing icon actions
+// MARK: - Rows
 
-/// A label (dot + name + right port/status) plus always-visible SF Symbol
-/// action buttons, built from the engine's `actions` array. Optional context
-/// menu for kill/details.
-private struct RowLayout<Label: View, Actions: View>: View {
-    private let label: Label
-    private let actions: Actions
-
-    init(
-        @ViewBuilder label: () -> Label,
-        @ViewBuilder actions: () -> Actions
-    ) {
-        self.label = label()
-        self.actions = actions()
-    }
-
-    var body: some View {
-        HStack(spacing: 4) {
-            label
-            Spacer(minLength: 6)
-            actions
-        }
-        .frame(height: 24)
-    }
-}
-
-struct ResourceRowView: View {
+/// `● Name :port` item with a submenu of actions from the engine.
+struct ResourceRow: View {
     @Bindable var state: AppState
     let resource: Resource
 
     var body: some View {
-        RowLayout {
-            HStack(spacing: 5) {
-                Text("●").font(.caption2)
-                Text(resource.name).lineLimit(1).truncationMode(.middle)
-            }
-            if let port = resource.port {
-                Text(":\(port)")
-                    .foregroundStyle(.secondary)
-                    .font(.callout)
-            }
-        } actions: {
-            ForEach(resource.actions, id: \.self) { token in
-                if token == "open", let urlString = resource.url, let url = URL(string: urlString) {
-                    icon("arrow.up.right", "Open") { NSWorkspace.shared.open(url) }
-                } else if let action = ResourceAction(rawValue: token), action != .open,
-                    action != .kill
-                {
-                    icon(ActionIcon.symbol(token), ActionIcon.help(token)) {
-                        Task {
-                            await state.perform(
-                                target: resource.id, action: action, displayName: resource.name)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 4)
-        .contextMenu {
+        Menu {
             ForEach(resource.actions, id: \.self) { token in
                 if token == "open", let urlString = resource.url, let url = URL(string: urlString) {
                     Button("Open") { NSWorkspace.shared.open(url) }
-                } else if let action = ResourceAction(rawValue: token), action != .open {
-                    Button(ActionIcon.help(token)) {
+                } else if let action = ResourceAction(rawValue: token), action != .open,
+                    action != .kill
+                {
+                    Button(ActionIcon.name(token)) {
                         Task {
                             await state.perform(
                                 target: resource.id, action: action, displayName: resource.name)
@@ -334,153 +193,122 @@ struct ResourceRowView: View {
             }
             if resource.actions.contains("kill") {
                 Divider()
-                Button("Force Kill…", role: .destructive) {
-                    Task {
-                        await state.perform(
-                            target: resource.id, action: .kill, displayName: resource.name)
+                Menu("Force Kill") {
+                    Button("Kill \(resource.name)", role: .destructive) {
+                        Task {
+                            await state.perform(
+                                target: resource.id, action: .kill, displayName: resource.name)
+                        }
                     }
                 }
             }
             if let pid = resource.pid {
                 Divider()
-                Text("PID \(pid) · \(formatBytes(resource.memoryBytes))")
-            }
-        }
-    }
-
-    private func icon(_ symbol: String, _ help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 11, weight: .medium))
-                .frame(width: 20, height: 20)
-        }
-        .buttonStyle(.borderless)
-        .help(help)
-    }
-}
-
-struct ProjectRowView: View {
-    @Bindable var state: AppState
-    let project: Project
-    @State private var confirmingStop = false
-
-    private var confirmStop: Bool {
-        UserDefaults.standard.object(forKey: SettingsKeys.confirmProjectStop) as? Bool ?? true
-    }
-
-    var body: some View {
-        DisclosureGroup {
-            ForEach(state.members(of: project)) { resource in
-                HStack(spacing: 5) {
-                    Text("·").font(.caption2).foregroundStyle(.secondary)
-                    Text(resource.name).lineLimit(1).truncationMode(.middle)
-                    Spacer()
-                    if let port = resource.port {
-                        Text(":\(port)").foregroundStyle(.secondary).font(.callout)
-                    }
-                }
-                .padding(.leading, 14)
-                .frame(height: 20)
+                Text("PID \(pid) · \(formatBytes(resource.memoryBytes))").foregroundStyle(.secondary)
             }
         } label: {
-            HStack {
-                Text(project.name)
-                    .font(.callout)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-                Spacer()
-                Text(formatBytes(project.memoryBytes))
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-                Button {
-                    stopTapped()
-                } label: {
-                    Image(systemName: "stop.fill")
-                        .font(.system(size: 11, weight: .medium))
-                        .frame(width: 20, height: 20)
-                }
-                .buttonStyle(.borderless)
-                .help("Stop project")
+            rowLabel
+        }
+    }
+
+    private var rowLabel: some View {
+        HStack(spacing: 6) {
+            Text("●").font(.caption2)
+            Text(resource.name).lineLimit(1).truncationMode(.middle)
+            Spacer()
+            if let port = resource.port {
+                Text(":\(port)").foregroundStyle(.secondary).font(.callout)
             }
         }
-        .font(.callout)
-        .padding(.horizontal, 4)
-        .confirmationDialog(
-            "Stop \(project.name)?",
-            isPresented: $confirmingStop,
-            titleVisibility: .visible
-        ) {
-            Button("Stop", role: .destructive) { stop() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("\(project.resourceCount) resources · \(formatBytes(project.memoryBytes))")
-        }
+        .frame(width: 240, alignment: .leading)
     }
+}
 
-    private func stopTapped() {
-        if confirmStop {
-            confirmingStop = true
-        } else {
-            stop()
-        }
-    }
+struct ProjectRow: View {
+    @Bindable var state: AppState
+    let project: Project
 
-    private func stop() {
-        Task {
-            await state.perform(target: project.id, action: .stop, displayName: project.name)
+    var body: some View {
+        Menu {
+            ForEach(state.members(of: project)) { resource in
+                ResourceRow(state: state, resource: resource)
+            }
+            Divider()
+            Button("Stop \(project.name)", role: .destructive) {
+                Task {
+                    await state.perform(target: project.id, action: .stop, displayName: project.name)
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("●").font(.caption2)
+                Text(project.name).lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Text(formatBytes(project.memoryBytes)).foregroundStyle(.secondary).font(.caption)
+            }
+            .frame(width: 240, alignment: .leading)
         }
     }
 }
 
-struct ContainerRowView: View {
+struct ContainerRow: View {
     @Bindable var state: AppState
     let container: Container
 
     var body: some View {
-        RowLayout {
-            HStack(spacing: 5) {
-                Text("●").font(.caption2)
-                Text(container.name).lineLimit(1).truncationMode(.middle)
-            }
-            Text(container.status)
-                .foregroundStyle(.secondary)
-                .font(.callout)
-        } actions: {
+        Menu {
             ForEach(container.actions, id: \.self) { token in
                 if let action = ResourceAction(rawValue: token) {
-                    Button {
+                    Button(ActionIcon.name(token)) {
                         Task {
                             await state.perform(
                                 target: container.id, action: action, displayName: container.name)
                         }
-                    } label: {
-                        Image(systemName: ActionIcon.symbol(token))
-                            .font(.system(size: 11, weight: .medium))
-                            .frame(width: 20, height: 20)
                     }
-                    .buttonStyle(.borderless)
-                    .help(ActionIcon.help(token))
                 }
             }
+        } label: {
+            HStack(spacing: 6) {
+                Text("●").font(.caption2)
+                Text(container.name).lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Text(container.status).foregroundStyle(.secondary).font(.callout)
+            }
+            .frame(width: 240, alignment: .leading)
         }
-        .padding(.horizontal, 4)
     }
 }
 
-struct SessionRowView: View {
+struct SessionRow: View {
     @Bindable var state: AppState
     let session: Session
 
     var body: some View {
-        HStack {
-            Text(session.agent)
-                .lineLimit(1)
-            Spacer()
-            Text("\(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))")
-                .foregroundStyle(.secondary)
-                .font(.callout)
+        Button {
+            // Display-only row; deep session details live in wyd.
+        } label: {
+            HStack(spacing: 6) {
+                Text(session.agent).lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Text("\(state.name(forProjectID: session.projectID) ?? "—") · \(formatAge(session.ageSeconds))")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
+            .frame(width: 240, alignment: .leading)
         }
-        .frame(height: 24)
-        .padding(.horizontal, 4)
+        .disabled(true)
+    }
+}
+
+/// Menu label words for engine action tokens.
+enum ActionIcon {
+    static func name(_ token: String) -> String {
+        switch token {
+        case "open": "Open"
+        case "start": "Start"
+        case "stop": "Stop"
+        case "restart": "Restart"
+        default: "Action"
+        }
     }
 }

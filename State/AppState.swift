@@ -43,6 +43,9 @@ final class AppState {
         if UserDefaults.standard.string(forKey: SettingsKeys.refreshFrequency) == nil {
             UserDefaults.standard.set(RefreshFrequency.auto.rawValue, forKey: SettingsKeys.refreshFrequency)
         }
+        // Closed-menu refresh keeps the cached snapshot warm (20s/5s/off);
+        // the open menu drives its own 3s loop via `.task`.
+        Task { await startBackgroundRefresh() }
     }
 
     var frequency: RefreshFrequency {
@@ -52,6 +55,20 @@ final class AppState {
             ) ?? .auto
         }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: SettingsKeys.refreshFrequency) }
+    }
+
+    /// Closed-menu background refresh: every `frequency` interval, unless
+    /// Paused. The open-menu loop drives its own 3s refreshes; `inFlight`
+    /// drops any overlap between the two.
+    func startBackgroundRefresh() async {
+        while !Task.isCancelled {
+            if let interval = frequency.backgroundInterval {
+                try? await Task.sleep(for: .seconds(interval))
+                await refresh()
+            } else {
+                try? await Task.sleep(for: .seconds(30))
+            }
+        }
     }
 
     func refresh() async {
