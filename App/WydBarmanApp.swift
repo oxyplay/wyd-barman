@@ -23,7 +23,7 @@ struct WydBarmanApp: App {
         .windowResizability(.contentSize)
     }
 
-    /// Template icon at a fixed 13pt: `MenuBarExtra`'s SwiftUI `Image` label
+    /// Template icon at a fixed size: `MenuBarExtra`'s SwiftUI `Image` label
     /// ignores parent `.frame` sizing (it sizes to the asset), so size the
     /// underlying `NSImage` directly. Template mode keeps dark/light correct.
     private func menuIcon() -> Image {
@@ -32,7 +32,7 @@ struct WydBarmanApp: App {
             return Image(systemName: "wineglass")
         }
         nsImage.isTemplate = true
-        nsImage.size = NSSize(width: 13, height: 13)
+        nsImage.size = NSSize(width: 16, height: 16)
         return Image(nsImage: nsImage)
     }
 }
